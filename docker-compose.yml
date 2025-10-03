@@ -1,0 +1,75 @@
+version: '3.8'
+
+services:
+  # PostgreSQL Database
+  postgres:
+    image: postgres:15
+    environment:
+      POSTGRES_DB: smartdinner
+      POSTGRES_USER: smartdinner_user
+      POSTGRES_PASSWORD: smartdinner_pass
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./database/scripts/init.sql:/docker-entrypoint-initdb.d/init.sql
+    ports:
+      - "5432:5432"
+    networks:
+      - smartdinner-network
+
+  # Backend API (Node.js)
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    environment:
+      NODE_ENV: development
+      DATABASE_URL: postgres://smartdinner_user:smartdinner_pass@postgres:5432/smartdinner
+      JWT_SECRET: your-jwt-secret-here
+      PORT: 3000
+    ports:
+      - "3000:3000"
+    depends_on:
+      - postgres
+    volumes:
+      - ./backend:/app
+      - /app/node_modules
+    networks:
+      - smartdinner-network
+
+  # AI Service (Python)
+  ai-service:
+    build:
+      context: ./ai-service
+      dockerfile: Dockerfile
+    environment:
+      DATABASE_URL: postgres://smartdinner_user:smartdinner_pass@postgres:5432/smartdinner
+      PYTHON_ENV: development
+    ports:
+      - "8000:8000"
+    depends_on:
+      - postgres
+    volumes:
+      - ./ai-service:/app
+    networks:
+      - smartdinner-network
+
+  # Frontend (Flutter Web - for development)
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    ports:
+      - "8080:8080"
+    depends_on:
+      - backend
+    volumes:
+      - ./frontend:/app
+    networks:
+      - smartdinner-network
+
+volumes:
+  postgres_data:
+
+networks:
+  smartdinner-network:
+    driver: bridge
