@@ -29,7 +29,6 @@ SmartDinner es una solución tecnológica integral diseñada para revolucionar l
 
 ```
 smartdinner/
-├── frontend/          # Aplicación Flutter
 ├── backend/           # API Node.js + Express
 ├── ai-service/        # Servicio de IA en Python
 ├── database/          # Scripts y migraciones de BD
@@ -79,15 +78,18 @@ docker-compose up -d
 ```
 
 3. Acceder a las aplicaciones:
-- Frontend Web: http://localhost:8080
 - Backend API: http://localhost:3000
 - AI Service: http://localhost:8000
 - Base de Datos: localhost:5432
+  
+	Para el frontend Flutter, ejecútalo localmente durante el desarrollo:
+	- flutter pub get
+	- flutter run -d chrome (o el dispositivo que prefieras)
 
 ### Desarrollo Local
 
 Ver los README específicos en cada directorio:
-- [Frontend README](./frontend/README.md)
+- Frontend (en la raíz del repositorio): usar los comandos de Flutter
 - [Backend README](./backend/README.md)
 - [AI Service README](./ai-service/README.md)
 

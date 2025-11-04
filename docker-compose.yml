@@ -52,20 +52,10 @@ services:
       - ./ai-service:/app
     networks:
       - smartdinner-network
-
-  # Frontend (Flutter Web - for development)
-  frontend:
-    build:
-      context: ./frontend
-      dockerfile: Dockerfile
-    ports:
-      - "8080:8080"
-    depends_on:
-      - backend
-    volumes:
-      - ./frontend:/app
-    networks:
-      - smartdinner-network
+  
+  # Nota: El frontend Flutter se ejecuta localmente (flutter run / flutter build).
+  # Si más adelante deseas contenerizar el frontend web, añade un servicio aquí
+  # que apunte a la app en la raíz del proyecto y su correspondiente Dockerfile.
 
 volumes:
   postgres_data:

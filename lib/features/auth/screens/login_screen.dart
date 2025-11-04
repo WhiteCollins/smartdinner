@@ -376,36 +376,78 @@ class _LoginScreenState extends State<LoginScreen> {
       final email = _emailController.text.trim();
       final password = _passwordController.text.trim();
 
+      print('🔐 Intentando login con: $email');
+
       // Intentar iniciar sesión con Supabase
       final response = await _supabaseService.signInWithEmail(
         email: email,
         password: password,
       );
 
+      print('✅ Login exitoso! User ID: ${response.user?.id}');
+
       if (response.user != null) {
         // Login exitoso
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Text('¡Bienvenido a SmartDinner!'),
+              content: Row(
+                children: [
+                  Icon(Icons.check_circle, color: Colors.white),
+                  SizedBox(width: 8),
+                  Expanded(child: Text('¡Bienvenido a SmartDinner!')),
+                ],
+              ),
               backgroundColor: Colors.green,
+              behavior: SnackBarBehavior.floating,
+              duration: Duration(seconds: 2),
             ),
           );
 
+          // Pequeño delay para mostrar el mensaje
+          await Future.delayed(Duration(milliseconds: 500));
+
           // Navegar a la pantalla principal
-          Navigator.pushReplacementNamed(context, '/home');
+          if (mounted) {
+            Navigator.pushReplacementNamed(context, '/home');
+          }
         }
       }
     } catch (e) {
-      // Login fallido
+      print('❌ Error en login: $e');
+
+      // Login fallido - Parsear el error para mostrar mensaje claro
+      String errorMessage = 'Error desconocido';
+
+      final errorStr = e.toString().toLowerCase();
+
+      if (errorStr.contains('invalid login credentials') ||
+          errorStr.contains('invalid_credentials')) {
+        errorMessage = '❌ Email o contraseña incorrectos';
+      } else if (errorStr.contains('email not confirmed')) {
+        errorMessage = '⚠️ Debes confirmar tu email primero';
+      } else if (errorStr.contains('user not found')) {
+        errorMessage = '❌ No existe una cuenta con este email';
+      } else if (errorStr.contains('network')) {
+        errorMessage = '🌐 Error de conexión. Verifica tu internet';
+      } else if (errorStr.contains('too many requests')) {
+        errorMessage = '⏰ Demasiados intentos. Espera un momento';
+      } else {
+        errorMessage = 'Error: ${e.toString()}';
+      }
+
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(
-              'Error al iniciar sesión: ${e.toString()}',
-            ),
+            content: Text(errorMessage),
             backgroundColor: Colors.red,
-            duration: Duration(seconds: 4),
+            behavior: SnackBarBehavior.floating,
+            duration: Duration(seconds: 5),
+            action: SnackBarAction(
+              label: 'Reintentar',
+              textColor: Colors.white,
+              onPressed: _performLogin,
+            ),
           ),
         );
       }
