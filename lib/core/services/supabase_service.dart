@@ -5,7 +5,7 @@ class SupabaseService {
   final SupabaseClient _client = SupabaseConfig.client;
 
   // ==================== AUTENTICACIÓN ====================
-  
+
   /// Iniciar sesión con email y contraseña
   Future<AuthResponse> signInWithEmail({
     required String email,
@@ -33,10 +33,7 @@ class SupabaseService {
       final response = await _client.auth.signUp(
         email: email,
         password: password,
-        data: {
-          'name': name,
-          'phone': phone,
-        },
+        data: {'name': name, 'phone': phone},
       );
 
       // Crear registro en tabla users
@@ -83,7 +80,7 @@ class SupabaseService {
           .select()
           .eq('id', userId)
           .single();
-      
+
       return response;
     } catch (e) {
       throw _handleError(e);
@@ -100,7 +97,7 @@ class SupabaseService {
       final updates = <String, dynamic>{
         'updated_at': DateTime.now().toIso8601String(),
       };
-      
+
       if (name != null) updates['name'] = name;
       if (phone != null) updates['phone'] = phone;
 
@@ -178,12 +175,20 @@ class SupabaseService {
   // ==================== MENÚ ====================
 
   /// Obtener todos los items del menú
-  Future<List<Map<String, dynamic>>> getMenuItems({String? category}) async {
+  /// [category] - Filtrar por categoría específica
+  /// [showAll] - Si es true, muestra todos los items (disponibles y no disponibles)
+  ///             Si es false, solo muestra items disponibles. Default: false
+  Future<List<Map<String, dynamic>>> getMenuItems({
+    String? category,
+    bool showAll = false,
+  }) async {
     try {
-      var query = _client
-          .from('menu_items')
-          .select()
-          .eq('is_available', true);
+      var query = _client.from('menu_items').select();
+
+      // Solo filtrar por disponibilidad si showAll es false
+      if (!showAll) {
+        query = query.eq('is_available', true);
+      }
 
       if (category != null) {
         query = query.eq('category', category);
@@ -206,6 +211,49 @@ class SupabaseService {
           .single();
 
       return response;
+    } catch (e) {
+      throw _handleError(e);
+    }
+  }
+
+  /// Crear nuevo item del menú
+  Future<Map<String, dynamic>> createMenuItem(Map<String, dynamic> data) async {
+    try {
+      final response = await _client
+          .from('menu_items')
+          .insert(data)
+          .select()
+          .single();
+
+      return response;
+    } catch (e) {
+      throw _handleError(e);
+    }
+  }
+
+  /// Actualizar item del menú
+  Future<Map<String, dynamic>> updateMenuItem(
+    String itemId,
+    Map<String, dynamic> data,
+  ) async {
+    try {
+      final response = await _client
+          .from('menu_items')
+          .update(data)
+          .eq('id', itemId)
+          .select()
+          .single();
+
+      return response;
+    } catch (e) {
+      throw _handleError(e);
+    }
+  }
+
+  /// Eliminar item del menú
+  Future<void> deleteMenuItem(String itemId) async {
+    try {
+      await _client.from('menu_items').delete().eq('id', itemId);
     } catch (e) {
       throw _handleError(e);
     }
@@ -243,14 +291,18 @@ class SupabaseService {
       final orderId = orderResponse['id'];
 
       // Agregar items del pedido
-      final orderItems = items.map((item) => {
-        'order_id': orderId,
-        'menu_item_id': item['menu_item_id'],
-        'quantity': item['quantity'],
-        'unit_price': item['unit_price'],
-        'subtotal': item['unit_price'] * item['quantity'],
-        'special_instructions': item['special_instructions'],
-      }).toList();
+      final orderItems = items
+          .map(
+            (item) => {
+              'order_id': orderId,
+              'menu_item_id': item['menu_item_id'],
+              'quantity': item['quantity'],
+              'unit_price': item['unit_price'],
+              'subtotal': item['unit_price'] * item['quantity'],
+              'special_instructions': item['special_instructions'],
+            },
+          )
+          .toList();
 
       await _client.from('order_items').insert(orderItems);
 
@@ -312,19 +364,23 @@ class SupabaseService {
     DateTime? endDate,
   }) async {
     try {
-      var query = _client
-          .from('predictions')
-          .select('''
+      var query = _client.from('predictions').select('''
             *,
             menu_items (*)
           ''');
 
       if (startDate != null) {
-        query = query.gte('prediction_date', startDate.toIso8601String().split('T')[0]);
+        query = query.gte(
+          'prediction_date',
+          startDate.toIso8601String().split('T')[0],
+        );
       }
 
       if (endDate != null) {
-        query = query.lte('prediction_date', endDate.toIso8601String().split('T')[0]);
+        query = query.lte(
+          'prediction_date',
+          endDate.toIso8601String().split('T')[0],
+        );
       }
 
       final response = await query.order('prediction_date', ascending: false);
@@ -415,7 +471,10 @@ class SupabaseService {
   // ==================== REAL-TIME ====================
 
   /// Suscribirse a cambios en órdenes
-  RealtimeChannel subscribeToOrders(String userId, Function(Map<String, dynamic>) onOrderUpdate) {
+  RealtimeChannel subscribeToOrders(
+    String userId,
+    Function(Map<String, dynamic>) onOrderUpdate,
+  ) {
     return _client
         .channel('orders:$userId')
         .onPostgresChanges(
@@ -435,7 +494,10 @@ class SupabaseService {
   }
 
   /// Suscribirse a notificaciones en tiempo real
-  RealtimeChannel subscribeToNotifications(String userId, Function(Map<String, dynamic>) onNotification) {
+  RealtimeChannel subscribeToNotifications(
+    String userId,
+    Function(Map<String, dynamic>) onNotification,
+  ) {
     return _client
         .channel('notifications:$userId')
         .onPostgresChanges(

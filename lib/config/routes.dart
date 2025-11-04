@@ -4,7 +4,9 @@ import '../features/auth/screens/register_screen.dart';
 import '../features/reservations/screens/reservations_screen.dart';
 import '../features/orders/screens/orders_screen.dart';
 import '../features/menu/screens/menu_screen.dart';
+import '../features/menu/screens/menu_admin_screen.dart';
 import '../features/admin/screens/dashboard_screen.dart';
+import '../utils/supabase_test_screen.dart';
 
 class AppRoutes {
   static const String splash = '/';
@@ -19,6 +21,7 @@ class AppRoutes {
   static const String adminOrders = '/admin/orders';
   static const String adminMenu = '/admin/menu';
   static const String adminPredictions = '/admin/predictions';
+  static const String test = '/test'; // Ruta temporal para diagnóstico
 
   static Map<String, WidgetBuilder> get routes {
     return {
@@ -29,7 +32,9 @@ class AppRoutes {
       reservations: (context) => ReservationsScreen(),
       orders: (context) => OrdersScreen(),
       menu: (context) => MenuScreen(),
+      adminMenu: (context) => MenuAdminScreen(),
       adminDashboard: (context) => DashboardScreen(),
+      test: (context) => const SupabaseTestScreen(), // Pantalla de diagnóstico
     };
   }
 }
@@ -69,6 +74,19 @@ class SplashScreen extends StatelessWidget {
                 padding: EdgeInsets.symmetric(horizontal: 32, vertical: 16),
               ),
               child: Text('Comenzar'),
+            ),
+            SizedBox(height: 16),
+            OutlinedButton.icon(
+              onPressed: () {
+                Navigator.pushNamed(context, AppRoutes.test);
+              },
+              style: OutlinedButton.styleFrom(
+                foregroundColor: Colors.white,
+                side: BorderSide(color: Colors.white),
+                padding: EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+              ),
+              icon: Icon(Icons.bug_report, size: 18),
+              label: Text('🔧 Diagnóstico'),
             ),
           ],
         ),

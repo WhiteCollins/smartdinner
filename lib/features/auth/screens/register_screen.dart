@@ -19,9 +19,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: Text('Crear Cuenta'),
-      ),
+      appBar: AppBar(title: Text('Crear Cuenta')),
       body: Padding(
         padding: const EdgeInsets.all(16.0),
         child: Form(
@@ -30,7 +28,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
             child: Column(
               children: [
                 SizedBox(height: 32),
-                
+
                 // Logo placeholder
                 Container(
                   height: 80,
@@ -46,7 +44,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                   ),
                 ),
                 SizedBox(height: 32),
-                
+
                 // Name field
                 TextFormField(
                   controller: _nameController,
@@ -62,7 +60,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                   },
                 ),
                 SizedBox(height: 16),
-                
+
                 // Email field
                 TextFormField(
                   controller: _emailController,
@@ -79,7 +77,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                   },
                 ),
                 SizedBox(height: 16),
-                
+
                 // Phone field
                 TextFormField(
                   controller: _phoneController,
@@ -90,7 +88,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                   keyboardType: TextInputType.phone,
                 ),
                 SizedBox(height: 16),
-                
+
                 // Password field
                 TextFormField(
                   controller: _passwordController,
@@ -110,7 +108,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                   },
                 ),
                 SizedBox(height: 16),
-                
+
                 // Confirm password field
                 TextFormField(
                   controller: _confirmPasswordController,
@@ -130,7 +128,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                   },
                 ),
                 SizedBox(height: 24),
-                
+
                 // Register button
                 ElevatedButton(
                   onPressed: _isLoading
@@ -146,8 +144,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
                           width: 20,
                           child: CircularProgressIndicator(
                             strokeWidth: 2,
-                            valueColor:
-                                AlwaysStoppedAnimation<Color>(Colors.white),
+                            valueColor: AlwaysStoppedAnimation<Color>(
+                              Colors.white,
+                            ),
                           ),
                         )
                       : Text('Crear Cuenta'),
@@ -156,7 +155,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                   ),
                 ),
                 SizedBox(height: 16),
-                
+
                 // Login link
                 TextButton(
                   onPressed: () {
@@ -187,6 +186,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
       final password = _passwordController.text.trim();
       final phone = _phoneController.text.trim();
 
+      print('📝 Registrando usuario: $email');
+
       // Registrar usuario en Supabase
       final response = await _supabaseService.signUpWithEmail(
         email: email,
@@ -195,31 +196,72 @@ class _RegisterScreenState extends State<RegisterScreen> {
         phone: phone.isNotEmpty ? phone : null,
       );
 
+      print('✅ Registro exitoso! User ID: ${response.user?.id}');
+
       if (response.user != null) {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Text('¡Cuenta creada exitosamente! Bienvenido $name'),
+              content: Row(
+                children: [
+                  Icon(Icons.check_circle, color: Colors.white),
+                  SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      '¡Cuenta creada exitosamente! Bienvenido $name',
+                    ),
+                  ),
+                ],
+              ),
               backgroundColor: Colors.green,
+              behavior: SnackBarBehavior.floating,
               duration: Duration(seconds: 2),
             ),
           );
 
           // Navegar al home
-          Future.delayed(Duration(seconds: 1), () {
-            if (mounted) {
-              Navigator.pushReplacementNamed(context, '/home');
-            }
-          });
+          await Future.delayed(Duration(milliseconds: 800));
+
+          if (mounted) {
+            Navigator.pushReplacementNamed(context, '/home');
+          }
         }
       }
     } catch (e) {
+      print('❌ Error en registro: $e');
+
+      // Parsear el error para mostrar mensaje claro
+      String errorMessage = 'Error desconocido';
+
+      final errorStr = e.toString().toLowerCase();
+
+      if (errorStr.contains('user already registered') ||
+          errorStr.contains('already exists')) {
+        errorMessage = '❌ Ya existe una cuenta con este email';
+      } else if (errorStr.contains('password should be at least')) {
+        errorMessage = '⚠️ La contraseña debe tener al menos 6 caracteres';
+      } else if (errorStr.contains('invalid email')) {
+        errorMessage = '❌ Email inválido';
+      } else if (errorStr.contains('network')) {
+        errorMessage = '🌐 Error de conexión. Verifica tu internet';
+      } else if (errorStr.contains('violates row-level security')) {
+        errorMessage = '🔒 Error de permisos. Contacta al administrador';
+      } else {
+        errorMessage = 'Error: ${e.toString()}';
+      }
+
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Error al crear cuenta: ${e.toString()}'),
+            content: Text(errorMessage),
             backgroundColor: Colors.red,
-            duration: Duration(seconds: 4),
+            behavior: SnackBarBehavior.floating,
+            duration: Duration(seconds: 5),
+            action: SnackBarAction(
+              label: 'Reintentar',
+              textColor: Colors.white,
+              onPressed: _performRegistration,
+            ),
           ),
         );
       }

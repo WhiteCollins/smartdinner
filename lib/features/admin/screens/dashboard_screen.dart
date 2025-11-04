@@ -172,9 +172,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
               Icons.restaurant_menu,
               Colors.orange,
               () {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(content: Text('Navegando a menú...')),
-                );
+                Navigator.pushNamed(context, '/admin/menu');
               },
             ),
             _buildActionCard(
