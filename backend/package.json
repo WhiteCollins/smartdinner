@@ -36,7 +36,9 @@
     "pg": "^8.11.3",
     "knex": "^2.5.1",
     "node-cron": "^3.0.2",
-    "axios": "^1.6.0"
+    "axios": "^1.6.0",
+    "@supabase/supabase-js": "^2.39.0",
+    "uuid": "^9.0.1"
   },
   "devDependencies": {
     "nodemon": "^3.0.1",

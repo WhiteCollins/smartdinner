@@ -35,12 +35,11 @@ app.get('/health', (req, res) => {
 });
 
 // API Routes
-app.use('/api/auth', require('./routes/auth.routes'));
-app.use('/api/users', require('./routes/users.routes'));
-app.use('/api/reservations', require('./routes/reservations.routes'));
-app.use('/api/orders', require('./routes/orders.routes'));
-app.use('/api/menu', require('./routes/menu.routes'));
-app.use('/api/predictions', require('./routes/predictions.routes'));
+app.use('/api/users', require('./routes/userRoutes'));
+app.use('/api/menu', require('./routes/menuRoutes'));
+app.use('/api/reservations', require('./routes/reservationRoutes'));
+app.use('/api/orders', require('./routes/orderRoutes'));
+app.use('/api/inventory', require('./routes/inventoryRoutes'));
 
 // Error handling middleware
 app.use((err, req, res, next) => {
