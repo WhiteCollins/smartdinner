@@ -44,11 +44,8 @@ async def root():
     }
 
 @app.get("/health")
-async def health_check():
-    return {
-        "status": "OK",
-        "timestamp": datetime.now().isoformat()
-    }
+def health():
+    return {"status": "ok"}
 
 @app.post("/predict", response_model=PredictionResponse)
 async def predict_demand(request: PredictionRequest):

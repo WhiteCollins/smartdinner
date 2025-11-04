@@ -10,9 +10,15 @@ services:
       POSTGRES_PASSWORD: smartdinner_pass
     volumes:
       - postgres_data:/var/lib/postgresql/data
+      # Verifica que este archivo exista; de lo contrario, comenta esta línea o crea init.sql
       - ./database/scripts/init.sql:/docker-entrypoint-initdb.d/init.sql
     ports:
       - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U smartdinner_user -d smartdinner"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
     networks:
       - smartdinner-network
 
@@ -21,11 +27,8 @@ services:
     build:
       context: ./backend
       dockerfile: Dockerfile
-    environment:
-      NODE_ENV: development
-      DATABASE_URL: postgres://smartdinner_user:smartdinner_pass@postgres:5432/smartdinner
-      JWT_SECRET: your-jwt-secret-here
-      PORT: 3000
+    env_file:
+      - ./backend/.env
     ports:
       - "3000:3000"
     depends_on:
@@ -35,15 +38,20 @@ services:
       - /app/node_modules
     networks:
       - smartdinner-network
+    # Opcional: healthcheck si expones /health
+    # healthcheck:
+    #   test: ["CMD", "wget", "-qO-", "http://localhost:3000/health"]
+    #   interval: 10s
+    #   timeout: 5s
+    #   retries: 5
 
   # AI Service (Python)
   ai-service:
     build:
       context: ./ai-service
       dockerfile: Dockerfile
-    environment:
-      DATABASE_URL: postgres://smartdinner_user:smartdinner_pass@postgres:5432/smartdinner
-      PYTHON_ENV: development
+    env_file:
+      - ./ai-service/.env
     ports:
       - "8000:8000"
     depends_on:
@@ -52,10 +60,14 @@ services:
       - ./ai-service:/app
     networks:
       - smartdinner-network
-  
+    # healthcheck:
+    #   test: ["CMD", "wget", "-qO-", "http://localhost:8000/health"]
+    #   interval: 10s
+    #   timeout: 5s
+    #   retries: 5
+
   # Nota: El frontend Flutter se ejecuta localmente (flutter run / flutter build).
-  # Si más adelante deseas contenerizar el frontend web, añade un servicio aquí
-  # que apunte a la app en la raíz del proyecto y su correspondiente Dockerfile.
+  # Si deseas contenerizar Flutter Web, agrega un servicio aparte (Nginx) para servir build/web.
 
 volumes:
   postgres_data:
