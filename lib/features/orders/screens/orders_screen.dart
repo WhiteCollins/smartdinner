@@ -1,11 +1,16 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import '../../../core/state/theme_notifier.dart';
 
 class OrdersScreen extends StatefulWidget {
+  const OrdersScreen({super.key});
+
   @override
   _OrdersScreenState createState() => _OrdersScreenState();
 }
 
-class _OrdersScreenState extends State<OrdersScreen> with SingleTickerProviderStateMixin {
+class _OrdersScreenState extends State<OrdersScreen>
+    with SingleTickerProviderStateMixin {
   late TabController _tabController;
 
   @override
@@ -19,6 +24,13 @@ class _OrdersScreenState extends State<OrdersScreen> with SingleTickerProviderSt
     return Scaffold(
       appBar: AppBar(
         title: Text('Pedidos'),
+        actions: [
+          IconButton(
+            tooltip: 'Cambiar tema',
+            icon: const Icon(Icons.brightness_6),
+            onPressed: () => context.read<ThemeNotifier>().cycleMode(),
+          ),
+        ],
         bottom: TabBar(
           controller: _tabController,
           tabs: [
@@ -38,8 +50,8 @@ class _OrdersScreenState extends State<OrdersScreen> with SingleTickerProviderSt
         onPressed: () {
           Navigator.pushNamed(context, '/menu');
         },
-        child: Icon(Icons.add_shopping_cart),
         tooltip: 'Hacer nuevo pedido',
+        child: Icon(Icons.add_shopping_cart),
       ),
     );
   }
@@ -66,13 +78,19 @@ class _OrdersScreenState extends State<OrdersScreen> with SingleTickerProviderSt
                           children: [
                             Text(
                               'Pedido #${1001 + index}',
-                              style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                                fontWeight: FontWeight.bold,
-                              ),
+                              style: Theme.of(context)
+                                  .textTheme
+                                  .titleMedium
+                                  ?.copyWith(
+                                    fontWeight: FontWeight.bold,
+                                  ),
                             ),
                             Chip(
-                              label: Text(index == 0 ? 'Preparando' : 'En camino'),
-                              backgroundColor: index == 0 ? Colors.orange[100] : Colors.blue[100],
+                              label:
+                                  Text(index == 0 ? 'Preparando' : 'En camino'),
+                              backgroundColor: index == 0
+                                  ? Colors.orange[100]
+                                  : Colors.blue[100],
                             ),
                           ],
                         ),
@@ -86,22 +104,33 @@ class _OrdersScreenState extends State<OrdersScreen> with SingleTickerProviderSt
                           children: [
                             Text(
                               'Total: \$${(25.99 + index * 5).toStringAsFixed(2)}',
-                              style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                                fontWeight: FontWeight.bold,
-                              ),
+                              style: Theme.of(context)
+                                  .textTheme
+                                  .titleMedium
+                                  ?.copyWith(
+                                    fontWeight: FontWeight.bold,
+                                  ),
                             ),
                             Text(
                               'Tiempo estimado: ${15 + index * 10} min',
-                              style: TextStyle(color: Colors.grey[600]),
+                              style: TextStyle(
+                                color: Theme.of(context)
+                                    .colorScheme
+                                    .onSurface
+                                    .withOpacity(0.7),
+                              ),
                             ),
                           ],
                         ),
                         SizedBox(height: 8),
                         LinearProgressIndicator(
                           value: index == 0 ? 0.6 : 0.8,
-                          backgroundColor: Colors.grey[300],
+                          backgroundColor: Theme.of(context)
+                              .colorScheme
+                              .surfaceContainerHighest
+                              .withOpacity(0.6),
                           valueColor: AlwaysStoppedAnimation<Color>(
-                            Theme.of(context).primaryColor,
+                            Theme.of(context).colorScheme.primary,
                           ),
                         ),
                       ],
@@ -130,7 +159,8 @@ class _OrdersScreenState extends State<OrdersScreen> with SingleTickerProviderSt
                 child: Icon(Icons.check, color: Colors.white),
               ),
               title: Text('Pedido #${1000 - index}'),
-              subtitle: Text('${15 + index} de Octubre, 2024 - \$${(20 + index * 3).toStringAsFixed(2)}'),
+              subtitle: Text(
+                  '${15 + index} de Octubre, 2024 - \$${(20 + index * 3).toStringAsFixed(2)}'),
               trailing: TextButton(
                 onPressed: () {
                   // TODO: Show order details or reorder

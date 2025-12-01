@@ -1,13 +1,16 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:provider/provider.dart';
 
 import 'config/routes.dart';
 import 'config/themes.dart';
+import 'core/state/theme_notifier.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  
+
   // Cargar variables de entorno desde .env
   try {
     await dotenv.load(fileName: ".env");
@@ -15,7 +18,7 @@ Future<void> main() async {
   } catch (e) {
     print('❌ Error al cargar .env: $e');
   }
-  
+
   // Inicializar Supabase con las variables de entorno
   try {
     await Supabase.initialize(
@@ -26,7 +29,7 @@ Future<void> main() async {
   } catch (e) {
     print('❌ Error al inicializar Supabase: $e');
   }
-  
+
   runApp(const MyApp());
 }
 
@@ -35,14 +38,26 @@ class MyApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'SmartDinner',
-      theme: AppThemes.lightTheme,
-      darkTheme: AppThemes.darkTheme,
-      themeMode: ThemeMode.system,
-      initialRoute: AppRoutes.splash,
-      routes: AppRoutes.routes,
-      debugShowCheckedModeBanner: false,
+    return ChangeNotifierProvider(
+      create: (_) => ThemeNotifier(),
+      child: Consumer<ThemeNotifier>(
+        builder: (context, theme, _) {
+          return MaterialApp(
+            title: 'SmartDinner',
+            theme: AppThemes.lightTheme.copyWith(
+              textTheme: GoogleFonts.notoSansTextTheme(),
+            ),
+            darkTheme: AppThemes.darkTheme.copyWith(
+              textTheme: GoogleFonts.notoSansTextTheme(),
+            ),
+            themeMode: theme.mode,
+            // Arranque directo en la pantalla de Login
+            initialRoute: AppRoutes.login,
+            routes: AppRoutes.routes,
+            debugShowCheckedModeBanner: false,
+          );
+        },
+      ),
     );
   }
 }

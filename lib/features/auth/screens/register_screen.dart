@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import '../../../core/services/supabase_service.dart';
 
 class RegisterScreen extends StatefulWidget {
+  const RegisterScreen({super.key});
+
   @override
   _RegisterScreenState createState() => _RegisterScreenState();
 }
@@ -138,6 +140,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
                             _performRegistration();
                           }
                         },
+                  style: ElevatedButton.styleFrom(
+                    minimumSize: Size(double.infinity, 48),
+                  ),
                   child: _isLoading
                       ? SizedBox(
                           height: 20,
@@ -150,9 +155,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
                           ),
                         )
                       : Text('Crear Cuenta'),
-                  style: ElevatedButton.styleFrom(
-                    minimumSize: Size(double.infinity, 48),
-                  ),
                 ),
                 SizedBox(height: 16),
 
@@ -198,33 +200,30 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
       print('✅ Registro exitoso! User ID: ${response.user?.id}');
 
-      if (response.user != null) {
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Row(
-                children: [
-                  Icon(Icons.check_circle, color: Colors.white),
-                  SizedBox(width: 8),
-                  Expanded(
-                    child: Text(
-                      '¡Cuenta creada exitosamente! Bienvenido $name',
-                    ),
+      // Si Supabase requiere confirmación por email, avisamos y volvemos al login
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Row(
+              children: [
+                Icon(Icons.mark_email_unread, color: Colors.white),
+                SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    'Cuenta creada. Revisa tu correo y confirma tu email para iniciar sesión.',
                   ),
-                ],
-              ),
-              backgroundColor: Colors.green,
-              behavior: SnackBarBehavior.floating,
-              duration: Duration(seconds: 2),
+                ),
+              ],
             ),
-          );
+            backgroundColor: Colors.blue,
+            behavior: SnackBarBehavior.floating,
+            duration: Duration(seconds: 4),
+          ),
+        );
 
-          // Navegar al home
-          await Future.delayed(Duration(milliseconds: 800));
-
-          if (mounted) {
-            Navigator.pushReplacementNamed(context, '/home');
-          }
+        await Future.delayed(Duration(milliseconds: 800));
+        if (mounted) {
+          Navigator.pop(context); // Volver a login
         }
       }
     } catch (e) {

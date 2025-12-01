@@ -1,6 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import '../../../core/state/theme_notifier.dart';
 
 class ReservationsScreen extends StatefulWidget {
+  const ReservationsScreen({super.key});
+
   @override
   _ReservationsScreenState createState() => _ReservationsScreenState();
 }
@@ -12,6 +16,11 @@ class _ReservationsScreenState extends State<ReservationsScreen> {
       appBar: AppBar(
         title: Text('Reservas'),
         actions: [
+          IconButton(
+            tooltip: 'Cambiar tema',
+            icon: const Icon(Icons.brightness_6),
+            onPressed: () => context.read<ThemeNotifier>().cycleMode(),
+          ),
           IconButton(
             icon: Icon(Icons.add),
             onPressed: () {
@@ -40,17 +49,17 @@ class _ReservationsScreenState extends State<ReservationsScreen> {
                     SizedBox(height: 16),
                     ElevatedButton(
                       onPressed: _showNewReservationDialog,
-                      child: Text('Nueva Reserva'),
                       style: ElevatedButton.styleFrom(
                         minimumSize: Size(double.infinity, 40),
                       ),
+                      child: Text('Nueva Reserva'),
                     ),
                   ],
                 ),
               ),
             ),
             SizedBox(height: 16),
-            
+
             // My reservations section
             Align(
               alignment: Alignment.centerLeft,
@@ -60,7 +69,7 @@ class _ReservationsScreenState extends State<ReservationsScreen> {
               ),
             ),
             SizedBox(height: 8),
-            
+
             // Reservations list
             Expanded(
               child: ListView.builder(
@@ -157,7 +166,9 @@ class _ReservationsScreenState extends State<ReservationsScreen> {
             onPressed: () {
               Navigator.pop(context);
               ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(content: Text('Reserva creada (funcionalidad por implementar)')),
+                SnackBar(
+                    content:
+                        Text('Reserva creada (funcionalidad por implementar)')),
               );
             },
             child: Text('Reservar'),

@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import '../../../core/services/supabase_service.dart';
 
 class LoginScreen extends StatefulWidget {
+  const LoginScreen({super.key});
+
   @override
   _LoginScreenState createState() => _LoginScreenState();
 }
@@ -24,14 +26,16 @@ class _LoginScreenState extends State<LoginScreen> {
           final isMobile = constraints.maxWidth <= 600;
 
           return Container(
-            decoration: BoxDecoration(
+            decoration: const BoxDecoration(
               gradient: LinearGradient(
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
                 colors: [
-                  Theme.of(context).primaryColor.withOpacity(0.1),
-                  Theme.of(context).primaryColor.withOpacity(0.05),
+                  Color(0xFFF5F5F5), // Fondo claro blanco
+                  Color(0xFFE8F4FF), // Azul muy claro
+                  Color(0xFFF0E8FF), // Morado muy claro
                 ],
+                stops: [0.0, 0.5, 1.0],
               ),
             ),
             child: SafeArea(
@@ -62,13 +66,13 @@ class _LoginScreenState extends State<LoginScreen> {
     bool isTablet,
     bool isMobile,
   ) {
-    final maxWidth = isWideScreen
-        ? 400.0
-        : (isTablet ? 350.0 : double.infinity);
+    final maxWidth =
+        isWideScreen ? 400.0 : (isTablet ? 350.0 : double.infinity);
 
     return Container(
       constraints: BoxConstraints(maxWidth: maxWidth),
       child: Card(
+        color: Colors.white,
         elevation: isWideScreen ? 8 : 4,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         child: Padding(
@@ -136,25 +140,25 @@ class _LoginScreenState extends State<LoginScreen> {
         Text(
           'SmartDinner',
           style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-            fontSize: titleSize,
-            fontWeight: FontWeight.bold,
-            color: Theme.of(context).primaryColor,
-          ),
+                fontSize: titleSize,
+                fontWeight: FontWeight.bold,
+                color: Theme.of(context).primaryColor,
+              ),
         ),
         SizedBox(height: 8),
         Text(
           'Bienvenido de vuelta',
           style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-            color: Colors.grey[600],
-            fontSize: isMobile ? 14 : 16,
-          ),
+                color: Colors.grey[600],
+                fontSize: isMobile ? 14 : 16,
+              ),
         ),
       ],
     );
   }
 
   Widget _buildTestUsersCard(BuildContext context, bool isMobile) {
-    return Container(
+    return SizedBox(
       width: double.infinity,
       child: Card(
         color: Theme.of(context).primaryColor.withOpacity(0.1),
@@ -243,9 +247,14 @@ class _LoginScreenState extends State<LoginScreen> {
       children: [
         TextFormField(
           controller: _emailController,
+          style: const TextStyle(color: Color(0xFF3A3A3A)), // Texto oscuro
           decoration: InputDecoration(
             labelText: 'Email',
-            prefixIcon: Icon(Icons.email_outlined),
+            labelStyle: const TextStyle(color: Color(0xFF3A3A3A)),
+            prefixIcon:
+                const Icon(Icons.email_outlined, color: Color(0xFF3A3A3A)),
+            filled: true,
+            fillColor: Colors.white,
             border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
             contentPadding: EdgeInsets.symmetric(
               horizontal: 16,
@@ -267,9 +276,14 @@ class _LoginScreenState extends State<LoginScreen> {
         SizedBox(height: 16),
         TextFormField(
           controller: _passwordController,
+          style: const TextStyle(color: Color(0xFF3A3A3A)), // Texto oscuro
           decoration: InputDecoration(
             labelText: 'Contraseña',
-            prefixIcon: Icon(Icons.lock_outlined),
+            labelStyle: const TextStyle(color: Color(0xFF3A3A3A)),
+            prefixIcon:
+                const Icon(Icons.lock_outlined, color: Color(0xFF3A3A3A)),
+            filled: true,
+            fillColor: Colors.white,
             border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
             contentPadding: EdgeInsets.symmetric(
               horizontal: 16,
@@ -335,27 +349,17 @@ class _LoginScreenState extends State<LoginScreen> {
         SizedBox(height: 16),
         TextButton(
           onPressed: () {
-            Navigator.pushNamed(context, '/register');
+            Navigator.pushNamed(context, '/forgot-password');
           },
           style: TextButton.styleFrom(
             padding: EdgeInsets.symmetric(vertical: 12),
           ),
-          child: RichText(
-            text: TextSpan(
-              style: TextStyle(
-                color: Colors.grey[600],
-                fontSize: isMobile ? 14 : 16,
-              ),
-              children: [
-                TextSpan(text: '¿No tienes cuenta? '),
-                TextSpan(
-                  text: 'Regístrate',
-                  style: TextStyle(
-                    color: Theme.of(context).primaryColor,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-              ],
+          child: Text(
+            '¿Olvidaste tu contraseña?',
+            style: TextStyle(
+              color: Theme.of(context).primaryColor,
+              fontSize: isMobile ? 14 : 16,
+              fontWeight: FontWeight.w500,
             ),
           ),
         ),
@@ -437,17 +441,48 @@ class _LoginScreenState extends State<LoginScreen> {
       }
 
       if (mounted) {
+        // Si el problema es email no confirmado, ofrece reenviar confirmación
+        final isUnconfirmed = errorStr.contains('email not confirmed');
+
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(errorMessage),
             backgroundColor: Colors.red,
             behavior: SnackBarBehavior.floating,
-            duration: Duration(seconds: 5),
-            action: SnackBarAction(
-              label: 'Reintentar',
-              textColor: Colors.white,
-              onPressed: _performLogin,
-            ),
+            duration: Duration(seconds: isUnconfirmed ? 8 : 5),
+            action: isUnconfirmed
+                ? SnackBarAction(
+                    label: 'Reenviar',
+                    textColor: Colors.white,
+                    onPressed: () async {
+                      try {
+                        final email = _emailController.text.trim();
+                        await _supabaseService.resendEmailConfirmation(email);
+                        if (!mounted) return;
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Text('Correo de confirmación reenviado'),
+                            backgroundColor: Colors.green,
+                            behavior: SnackBarBehavior.floating,
+                          ),
+                        );
+                      } catch (e) {
+                        if (!mounted) return;
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Text('No se pudo reenviar: $e'),
+                            backgroundColor: Colors.red,
+                            behavior: SnackBarBehavior.floating,
+                          ),
+                        );
+                      }
+                    },
+                  )
+                : SnackBarAction(
+                    label: 'Reintentar',
+                    textColor: Colors.white,
+                    onPressed: _performLogin,
+                  ),
           ),
         );
       }

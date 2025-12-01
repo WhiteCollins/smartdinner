@@ -38,12 +38,11 @@ services:
       - /app/node_modules
     networks:
       - smartdinner-network
-    # Opcional: healthcheck si expones /health
-    # healthcheck:
-    #   test: ["CMD", "wget", "-qO-", "http://localhost:3000/health"]
-    #   interval: 10s
-    #   timeout: 5s
-    #   retries: 5
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:3000/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
   # AI Service (Python)
   ai-service:
@@ -60,11 +59,11 @@ services:
       - ./ai-service:/app
     networks:
       - smartdinner-network
-    # healthcheck:
-    #   test: ["CMD", "wget", "-qO-", "http://localhost:8000/health"]
-    #   interval: 10s
-    #   timeout: 5s
-    #   retries: 5
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:8000/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
   # Nota: El frontend Flutter se ejecuta localmente (flutter run / flutter build).
   # Si deseas contenerizar Flutter Web, agrega un servicio aparte (Nginx) para servir build/web.
