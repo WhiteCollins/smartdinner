@@ -1,11 +1,14 @@
 import 'package:flutter/material.dart';
 
 class MenuScreen extends StatefulWidget {
+  const MenuScreen({super.key});
+
   @override
   _MenuScreenState createState() => _MenuScreenState();
 }
 
-class _MenuScreenState extends State<MenuScreen> with SingleTickerProviderStateMixin {
+class _MenuScreenState extends State<MenuScreen>
+    with SingleTickerProviderStateMixin {
   late TabController _tabController;
   Map<int, int> cart = {}; // item_id -> quantity
 
@@ -44,7 +47,8 @@ class _MenuScreenState extends State<MenuScreen> with SingleTickerProviderStateM
       {
         'id': 4,
         'name': 'Pasta Carbonara',
-        'description': 'Espaguetis con panceta, huevo, parmesano y pimienta negra',
+        'description':
+            'Espaguetis con panceta, huevo, parmesano y pimienta negra',
         'price': 12.99,
         'image': 'assets/images/carbonara.jpg',
       },
@@ -129,14 +133,16 @@ class _MenuScreenState extends State<MenuScreen> with SingleTickerProviderStateM
       ),
       body: TabBarView(
         controller: _tabController,
-        children: categories.map((category) => _buildCategoryItems(category)).toList(),
+        children: categories
+            .map((category) => _buildCategoryItems(category))
+            .toList(),
       ),
     );
   }
 
   Widget _buildCategoryItems(String category) {
     final items = menuItems[category] ?? [];
-    
+
     return ListView.builder(
       padding: EdgeInsets.all(16),
       itemCount: items.length,
@@ -164,7 +170,7 @@ class _MenuScreenState extends State<MenuScreen> with SingleTickerProviderStateM
                   ),
                 ),
                 SizedBox(width: 16),
-                
+
                 // Item details
                 Expanded(
                   child: Column(
@@ -172,9 +178,10 @@ class _MenuScreenState extends State<MenuScreen> with SingleTickerProviderStateM
                     children: [
                       Text(
                         item['name'],
-                        style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                          fontWeight: FontWeight.bold,
-                        ),
+                        style:
+                            Theme.of(context).textTheme.titleMedium?.copyWith(
+                                  fontWeight: FontWeight.bold,
+                                ),
                       ),
                       SizedBox(height: 4),
                       Text(
@@ -187,15 +194,16 @@ class _MenuScreenState extends State<MenuScreen> with SingleTickerProviderStateM
                       SizedBox(height: 8),
                       Text(
                         '\$${item['price'].toStringAsFixed(2)}',
-                        style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                          color: Theme.of(context).primaryColor,
-                          fontWeight: FontWeight.bold,
-                        ),
+                        style:
+                            Theme.of(context).textTheme.titleMedium?.copyWith(
+                                  color: Theme.of(context).primaryColor,
+                                  fontWeight: FontWeight.bold,
+                                ),
                       ),
                     ],
                   ),
                 ),
-                
+
                 // Add to cart button
                 Column(
                   children: [
@@ -219,10 +227,10 @@ class _MenuScreenState extends State<MenuScreen> with SingleTickerProviderStateM
                     else
                       ElevatedButton(
                         onPressed: () => _addToCart(item['id']),
-                        child: Text('Agregar'),
                         style: ElevatedButton.styleFrom(
                           minimumSize: Size(0, 36),
                         ),
+                        child: Text('Agregar'),
                       ),
                   ],
                 ),
@@ -282,7 +290,7 @@ class _MenuScreenState extends State<MenuScreen> with SingleTickerProviderStateM
                 subtitle: Text('Cantidad: $quantity'),
                 trailing: Text('\$${(10.99 * quantity).toStringAsFixed(2)}'),
               );
-            }).toList(),
+            }),
             Divider(),
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -294,9 +302,9 @@ class _MenuScreenState extends State<MenuScreen> with SingleTickerProviderStateM
                 Text(
                   '\$${_calculateTotal().toStringAsFixed(2)}',
                   style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                    color: Theme.of(context).primaryColor,
-                    fontWeight: FontWeight.bold,
-                  ),
+                        color: Theme.of(context).primaryColor,
+                        fontWeight: FontWeight.bold,
+                      ),
                 ),
               ],
             ),
@@ -305,16 +313,18 @@ class _MenuScreenState extends State<MenuScreen> with SingleTickerProviderStateM
               onPressed: () {
                 Navigator.pop(context);
                 ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(content: Text('Pedido realizado (funcionalidad por implementar)')),
+                  SnackBar(
+                      content: Text(
+                          'Pedido realizado (funcionalidad por implementar)')),
                 );
                 setState(() {
                   cart.clear();
                 });
               },
-              child: Text('Realizar Pedido'),
               style: ElevatedButton.styleFrom(
                 minimumSize: Size(double.infinity, 48),
               ),
+              child: Text('Realizar Pedido'),
             ),
           ],
         ),

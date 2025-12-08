@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import '../config/supabase_config.dart';
 
 class SupabaseTestScreen extends StatefulWidget {
-  const SupabaseTestScreen({Key? key}) : super(key: key);
+  const SupabaseTestScreen({super.key});
 
   @override
   State<SupabaseTestScreen> createState() => _SupabaseTestScreenState();
@@ -21,7 +21,7 @@ class _SupabaseTestScreenState extends State<SupabaseTestScreen> {
     try {
       final url = SupabaseConfig.supabaseUrl;
       final key = SupabaseConfig.supabaseAnonKey;
-      
+
       if (url.isEmpty || key.isEmpty) {
         setState(() {
           _testResult = '❌ ERROR: Credenciales vacías\n\n'
@@ -42,10 +42,8 @@ class _SupabaseTestScreenState extends State<SupabaseTestScreen> {
       await Future.delayed(const Duration(milliseconds: 500));
 
       // Probar consulta simple
-      final response = await SupabaseConfig.client
-          .from('users')
-          .select('id')
-          .limit(1);
+      final response =
+          await SupabaseConfig.client.from('users').select('id').limit(1);
 
       setState(() {
         _testResult = '✅ CONEXIÓN EXITOSA!\n\n'
@@ -54,7 +52,6 @@ class _SupabaseTestScreenState extends State<SupabaseTestScreen> {
             '✓ La conexión con Supabase funciona correctamente';
         _isLoading = false;
       });
-
     } catch (e) {
       setState(() {
         _testResult = '❌ ERROR de conexión:\n\n$e\n\n'
@@ -75,9 +72,10 @@ class _SupabaseTestScreenState extends State<SupabaseTestScreen> {
     });
 
     try {
-      final testEmail = 'test_${DateTime.now().millisecondsSinceEpoch}@test.com';
+      final testEmail =
+          'test_${DateTime.now().millisecondsSinceEpoch}@test.com';
       final testPassword = 'Test123456!';
-      
+
       setState(() {
         _testResult = '📝 Creando cuenta de prueba...\n\n'
             'Email: $testEmail\n'
@@ -109,11 +107,10 @@ class _SupabaseTestScreenState extends State<SupabaseTestScreen> {
           _isLoading = false;
         });
       }
-
     } catch (e) {
       String errorMsg = e.toString();
       String advice = '';
-      
+
       if (errorMsg.contains('User already registered')) {
         advice = '✓ Este es un buen signo, significa que el registro funciona';
       } else if (errorMsg.contains('Email not confirmed')) {
@@ -122,7 +119,7 @@ class _SupabaseTestScreenState extends State<SupabaseTestScreen> {
       } else if (errorMsg.contains('rate limit')) {
         advice = '⚠️ Demasiados intentos, espera un momento';
       }
-      
+
       setState(() {
         _testResult = '❌ ERROR en registro:\n\n$errorMsg\n\n$advice';
         _isLoading = false;
@@ -168,11 +165,10 @@ class _SupabaseTestScreenState extends State<SupabaseTestScreen> {
           _isLoading = false;
         });
       }
-
     } catch (e) {
       String errorMsg = e.toString();
       String advice = '';
-      
+
       if (errorMsg.contains('Invalid login credentials')) {
         advice = '❌ El usuario admin NO existe en Supabase\n\n'
             '📋 Para crear el usuario admin:\n'
@@ -188,7 +184,7 @@ class _SupabaseTestScreenState extends State<SupabaseTestScreen> {
             'Ve a Supabase > Authentication > Users\n'
             'Busca al usuario y confírmalo manualmente';
       }
-      
+
       setState(() {
         _testResult = '❌ ERROR en login:\n\n$errorMsg\n\n$advice';
         _isLoading = false;

@@ -1,6 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import '../../../config/routes.dart';
+import '../../../core/state/theme_notifier.dart';
 
 class DashboardScreen extends StatefulWidget {
+  const DashboardScreen({super.key});
+
   @override
   _DashboardScreenState createState() => _DashboardScreenState();
 }
@@ -11,6 +16,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
     return Scaffold(
       appBar: AppBar(
         title: Text('Panel Administrativo'),
+        automaticallyImplyLeading: false,
         actions: [
           IconButton(
             icon: Icon(Icons.notifications),
@@ -22,6 +28,12 @@ class _DashboardScreenState extends State<DashboardScreen> {
             onSelected: (value) {
               if (value == 'logout') {
                 Navigator.pushReplacementNamed(context, '/login');
+              } else if (value == 'theme_light') {
+                context.read<ThemeNotifier>().setMode(ThemeMode.light);
+              } else if (value == 'theme_dark') {
+                context.read<ThemeNotifier>().setMode(ThemeMode.dark);
+              } else if (value == 'theme_system') {
+                context.read<ThemeNotifier>().setMode(ThemeMode.system);
               }
             },
             itemBuilder: (context) => [
@@ -32,6 +44,24 @@ class _DashboardScreenState extends State<DashboardScreen> {
               PopupMenuItem(
                 value: 'settings',
                 child: Text('Configuración'),
+              ),
+              PopupMenuDivider(),
+              PopupMenuItem(
+                enabled: false,
+                child:
+                    Text('Tema', style: TextStyle(fontWeight: FontWeight.w600)),
+              ),
+              PopupMenuItem(
+                value: 'theme_light',
+                child: Text('Claro'),
+              ),
+              PopupMenuItem(
+                value: 'theme_dark',
+                child: Text('Oscuro'),
+              ),
+              PopupMenuItem(
+                value: 'theme_system',
+                child: Text('Sistema'),
               ),
               PopupMenuDivider(),
               PopupMenuItem(
@@ -50,15 +80,15 @@ class _DashboardScreenState extends State<DashboardScreen> {
             // Statistics cards
             _buildStatsSection(),
             SizedBox(height: 24),
-            
+
             // Quick actions
             _buildQuickActions(),
             SizedBox(height: 24),
-            
+
             // Recent activity
             _buildRecentActivity(),
             SizedBox(height: 24),
-            
+
             // AI Predictions
             _buildPredictionsSection(),
           ],
@@ -78,24 +108,33 @@ class _DashboardScreenState extends State<DashboardScreen> {
         SizedBox(height: 16),
         Row(
           children: [
-            Expanded(child: _buildStatCard('Reservas', '24', Icons.event, Colors.blue)),
+            Expanded(
+                child:
+                    _buildStatCard('Reservas', '24', Icons.event, Colors.blue)),
             SizedBox(width: 12),
-            Expanded(child: _buildStatCard('Pedidos', '67', Icons.shopping_cart, Colors.green)),
+            Expanded(
+                child: _buildStatCard(
+                    'Pedidos', '67', Icons.shopping_cart, Colors.green)),
           ],
         ),
         SizedBox(height: 12),
         Row(
           children: [
-            Expanded(child: _buildStatCard('Ingresos', '\$1,234', Icons.attach_money, Colors.orange)),
+            Expanded(
+                child: _buildStatCard(
+                    'Ingresos', '\$1,234', Icons.attach_money, Colors.orange)),
             SizedBox(width: 12),
-            Expanded(child: _buildStatCard('Mesas Ocupadas', '18/25', Icons.table_restaurant, Colors.purple)),
+            Expanded(
+                child: _buildStatCard('Mesas Ocupadas', '18/25',
+                    Icons.table_restaurant, Colors.purple)),
           ],
         ),
       ],
     );
   }
 
-  Widget _buildStatCard(String title, String value, IconData icon, Color color) {
+  Widget _buildStatCard(
+      String title, String value, IconData icon, Color color) {
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(16.0),
@@ -121,7 +160,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
               title,
               style: TextStyle(
                 fontSize: 14,
-                color: Colors.grey[600],
+                color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
               ),
             ),
           ],
@@ -148,13 +187,19 @@ class _DashboardScreenState extends State<DashboardScreen> {
           childAspectRatio: 1.5,
           children: [
             _buildActionCard(
+              'Gestionar Usuarios',
+              Icons.people,
+              Colors.purple,
+              () {
+                Navigator.pushNamed(context, AppRoutes.adminUsers);
+              },
+            ),
+            _buildActionCard(
               'Gestionar Reservas',
               Icons.event_note,
               Colors.blue,
               () {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(content: Text('Navegando a reservas...')),
-                );
+                Navigator.pushNamed(context, AppRoutes.reservations);
               },
             ),
             _buildActionCard(
@@ -162,9 +207,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
               Icons.list_alt,
               Colors.green,
               () {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(content: Text('Navegando a pedidos...')),
-                );
+                Navigator.pushNamed(context, AppRoutes.orders);
               },
             ),
             _buildActionCard(
@@ -175,23 +218,14 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 Navigator.pushNamed(context, '/admin/menu');
               },
             ),
-            _buildActionCard(
-              'Predicciones IA',
-              Icons.analytics,
-              Colors.purple,
-              () {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(content: Text('Navegando a predicciones...')),
-                );
-              },
-            ),
           ],
         ),
       ],
     );
   }
 
-  Widget _buildActionCard(String title, IconData icon, Color color, VoidCallback onTap) {
+  Widget _buildActionCard(
+      String title, IconData icon, Color color, VoidCallback onTap) {
     return Card(
       child: InkWell(
         onTap: onTap,
@@ -235,18 +269,40 @@ class _DashboardScreenState extends State<DashboardScreen> {
             separatorBuilder: (context, index) => Divider(height: 1),
             itemBuilder: (context, index) {
               final activities = [
-                {'title': 'Nueva reserva para 4 personas', 'time': 'Hace 5 min', 'icon': Icons.event},
-                {'title': 'Pedido #1001 completado', 'time': 'Hace 12 min', 'icon': Icons.check_circle},
-                {'title': 'Mesa 7 liberada', 'time': 'Hace 18 min', 'icon': Icons.table_restaurant},
-                {'title': 'Nuevo platillo agregado al menú', 'time': 'Hace 1 hora', 'icon': Icons.add_circle},
-                {'title': 'Predicción IA actualizada', 'time': 'Hace 2 horas', 'icon': Icons.analytics},
+                {
+                  'title': 'Nueva reserva para 4 personas',
+                  'time': 'Hace 5 min',
+                  'icon': Icons.event
+                },
+                {
+                  'title': 'Pedido #1001 completado',
+                  'time': 'Hace 12 min',
+                  'icon': Icons.check_circle
+                },
+                {
+                  'title': 'Mesa 7 liberada',
+                  'time': 'Hace 18 min',
+                  'icon': Icons.table_restaurant
+                },
+                {
+                  'title': 'Nuevo platillo agregado al menú',
+                  'time': 'Hace 1 hora',
+                  'icon': Icons.add_circle
+                },
+                {
+                  'title': 'Predicción IA actualizada',
+                  'time': 'Hace 2 horas',
+                  'icon': Icons.analytics
+                },
               ];
-              
+
               final activity = activities[index];
               return ListTile(
                 leading: CircleAvatar(
-                  backgroundColor: Colors.grey[200],
-                  child: Icon(activity['icon'] as IconData, size: 20),
+                  backgroundColor:
+                      Theme.of(context).colorScheme.surfaceContainerHighest,
+                  child: Icon(activity['icon'] as IconData,
+                      size: 20, color: Theme.of(context).colorScheme.onSurface),
                 ),
                 title: Text(activity['title'] as String),
                 subtitle: Text(activity['time'] as String),
@@ -281,8 +337,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     Text(
                       'Demanda Prevista para Mañana',
                       style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                        fontWeight: FontWeight.bold,
-                      ),
+                            fontWeight: FontWeight.bold,
+                          ),
                     ),
                   ],
                 ),
@@ -298,10 +354,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
                       SnackBar(content: Text('Ver predicciones detalladas...')),
                     );
                   },
-                  child: Text('Ver Análisis Completo'),
                   style: ElevatedButton.styleFrom(
                     minimumSize: Size(double.infinity, 36),
                   ),
+                  child: Text('Ver Análisis Completo'),
                 ),
               ],
             ),

@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import '../../../core/services/supabase_service.dart';
 
 class MenuAdminScreen extends StatefulWidget {
+  const MenuAdminScreen({super.key});
+
   @override
   _MenuAdminScreenState createState() => _MenuAdminScreenState();
 }
@@ -140,7 +142,7 @@ class _MenuAdminScreenState extends State<MenuAdminScreen> {
                 ),
                 SizedBox(height: 12),
                 DropdownButtonFormField<String>(
-                  value: selectedCategory,
+                  initialValue: selectedCategory,
                   decoration: InputDecoration(
                     labelText: 'Categoría *',
                     border: OutlineInputBorder(),
@@ -287,8 +289,7 @@ class _MenuAdminScreenState extends State<MenuAdminScreen> {
               scrollDirection: Axis.horizontal,
               child: Row(
                 children: _categories.map((cat) {
-                  final isSelected =
-                      _selectedCategory == cat ||
+                  final isSelected = _selectedCategory == cat ||
                       (_selectedCategory == null && cat == 'Todos');
                   return Padding(
                     padding: EdgeInsets.only(right: 8),
@@ -313,130 +314,137 @@ class _MenuAdminScreenState extends State<MenuAdminScreen> {
             child: _isLoading
                 ? Center(child: CircularProgressIndicator())
                 : _menuItems.isEmpty
-                ? Center(
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Icon(
-                          Icons.restaurant_menu,
-                          size: 64,
-                          color: Colors.grey,
+                    ? Center(
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(
+                              Icons.restaurant_menu,
+                              size: 64,
+                              color: Colors.grey,
+                            ),
+                            SizedBox(height: 16),
+                            Text(
+                              'No hay items en el menú',
+                              style:
+                                  TextStyle(fontSize: 18, color: Colors.grey),
+                            ),
+                            SizedBox(height: 8),
+                            Text(
+                              'Presiona + para agregar el primero',
+                              style:
+                                  TextStyle(fontSize: 14, color: Colors.grey),
+                            ),
+                          ],
                         ),
-                        SizedBox(height: 16),
-                        Text(
-                          'No hay items en el menú',
-                          style: TextStyle(fontSize: 18, color: Colors.grey),
-                        ),
-                        SizedBox(height: 8),
-                        Text(
-                          'Presiona + para agregar el primero',
-                          style: TextStyle(fontSize: 14, color: Colors.grey),
-                        ),
-                      ],
-                    ),
-                  )
-                : ListView.builder(
-                    itemCount: _menuItems.length,
-                    itemBuilder: (context, index) {
-                      final item = _menuItems[index];
-                      return Card(
-                        margin: EdgeInsets.symmetric(
-                          horizontal: 16,
-                          vertical: 8,
-                        ),
-                        child: ListTile(
-                          leading: CircleAvatar(
-                            backgroundColor: item['is_available']
-                                ? Colors.green
-                                : Colors.red,
-                            child: Icon(Icons.restaurant, color: Colors.white),
-                          ),
-                          title: Text(
-                            item['name'],
-                            style: TextStyle(fontWeight: FontWeight.bold),
-                          ),
-                          subtitle: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                item['description'],
-                                maxLines: 2,
-                                overflow: TextOverflow.ellipsis,
+                      )
+                    : ListView.builder(
+                        itemCount: _menuItems.length,
+                        itemBuilder: (context, index) {
+                          final item = _menuItems[index];
+                          return Card(
+                            margin: EdgeInsets.symmetric(
+                              horizontal: 16,
+                              vertical: 8,
+                            ),
+                            child: ListTile(
+                              leading: CircleAvatar(
+                                backgroundColor: item['is_available']
+                                    ? Colors.green
+                                    : Colors.red,
+                                child:
+                                    Icon(Icons.restaurant, color: Colors.white),
                               ),
-                              SizedBox(height: 4),
-                              Row(
+                              title: Text(
+                                item['name'],
+                                style: TextStyle(fontWeight: FontWeight.bold),
+                              ),
+                              subtitle: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
-                                  Chip(
-                                    label: Text(
-                                      item['category'].toString().toUpperCase(),
-                                      style: TextStyle(fontSize: 10),
+                                  Text(
+                                    item['description'],
+                                    maxLines: 2,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                  SizedBox(height: 4),
+                                  Row(
+                                    children: [
+                                      Chip(
+                                        label: Text(
+                                          item['category']
+                                              .toString()
+                                              .toUpperCase(),
+                                          style: TextStyle(fontSize: 10),
+                                        ),
+                                        padding: EdgeInsets.all(4),
+                                        materialTapTargetSize:
+                                            MaterialTapTargetSize.shrinkWrap,
+                                      ),
+                                      SizedBox(width: 8),
+                                      if (item['is_vegetarian'])
+                                        Icon(
+                                          Icons.eco,
+                                          size: 16,
+                                          color: Colors.green,
+                                        ),
+                                    ],
+                                  ),
+                                ],
+                              ),
+                              trailing: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Text(
+                                    '\$${item['price'].toStringAsFixed(2)}',
+                                    style: TextStyle(
+                                      fontSize: 18,
+                                      fontWeight: FontWeight.bold,
+                                      color: Theme.of(context).primaryColor,
                                     ),
-                                    padding: EdgeInsets.all(4),
-                                    materialTapTargetSize:
-                                        MaterialTapTargetSize.shrinkWrap,
                                   ),
                                   SizedBox(width: 8),
-                                  if (item['is_vegetarian'])
-                                    Icon(
-                                      Icons.eco,
-                                      size: 16,
-                                      color: Colors.green,
-                                    ),
-                                ],
-                              ),
-                            ],
-                          ),
-                          trailing: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Text(
-                                '\$${item['price'].toStringAsFixed(2)}',
-                                style: TextStyle(
-                                  fontSize: 18,
-                                  fontWeight: FontWeight.bold,
-                                  color: Theme.of(context).primaryColor,
-                                ),
-                              ),
-                              SizedBox(width: 8),
-                              PopupMenuButton(
-                                icon: Icon(Icons.more_vert),
-                                itemBuilder: (context) => [
-                                  PopupMenuItem(
-                                    value: 'edit',
-                                    child: Row(
-                                      children: [
-                                        Icon(Icons.edit, color: Colors.blue),
-                                        SizedBox(width: 8),
-                                        Text('Editar'),
-                                      ],
-                                    ),
-                                  ),
-                                  PopupMenuItem(
-                                    value: 'delete',
-                                    child: Row(
-                                      children: [
-                                        Icon(Icons.delete, color: Colors.red),
-                                        SizedBox(width: 8),
-                                        Text('Eliminar'),
-                                      ],
-                                    ),
+                                  PopupMenuButton(
+                                    icon: Icon(Icons.more_vert),
+                                    itemBuilder: (context) => [
+                                      PopupMenuItem(
+                                        value: 'edit',
+                                        child: Row(
+                                          children: [
+                                            Icon(Icons.edit,
+                                                color: Colors.blue),
+                                            SizedBox(width: 8),
+                                            Text('Editar'),
+                                          ],
+                                        ),
+                                      ),
+                                      PopupMenuItem(
+                                        value: 'delete',
+                                        child: Row(
+                                          children: [
+                                            Icon(Icons.delete,
+                                                color: Colors.red),
+                                            SizedBox(width: 8),
+                                            Text('Eliminar'),
+                                          ],
+                                        ),
+                                      ),
+                                    ],
+                                    onSelected: (value) {
+                                      if (value == 'edit') {
+                                        _showCreateEditDialog(item: item);
+                                      } else if (value == 'delete') {
+                                        _deleteItem(item['id'], item['name']);
+                                      }
+                                    },
                                   ),
                                 ],
-                                onSelected: (value) {
-                                  if (value == 'edit') {
-                                    _showCreateEditDialog(item: item);
-                                  } else if (value == 'delete') {
-                                    _deleteItem(item['id'], item['name']);
-                                  }
-                                },
                               ),
-                            ],
-                          ),
-                          isThreeLine: true,
-                        ),
-                      );
-                    },
-                  ),
+                              isThreeLine: true,
+                            ),
+                          );
+                        },
+                      ),
           ),
         ],
       ),

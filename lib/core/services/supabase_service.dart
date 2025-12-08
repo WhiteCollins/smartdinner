@@ -1,4 +1,5 @@
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import '../../config/supabase_config.dart';
 
 class SupabaseService {
@@ -34,6 +35,7 @@ class SupabaseService {
         email: email,
         password: password,
         data: {'name': name, 'phone': phone},
+        emailRedirectTo: kIsWeb ? Uri.base.origin : null,
       );
 
       // Crear registro en tabla users
@@ -53,10 +55,31 @@ class SupabaseService {
     }
   }
 
+  /// Reenviar correo de confirmación
+  Future<void> resendEmailConfirmation(String email) async {
+    try {
+      await _client.auth.resend(
+        type: OtpType.signup,
+        email: email,
+      );
+    } catch (e) {
+      throw _handleError(e);
+    }
+  }
+
   /// Cerrar sesión
   Future<void> signOut() async {
     try {
       await _client.auth.signOut();
+    } catch (e) {
+      throw _handleError(e);
+    }
+  }
+
+  /// Recuperar contraseña - Envía email de reset
+  Future<void> resetPassword(String email) async {
+    try {
+      await _client.auth.resetPasswordForEmail(email);
     } catch (e) {
       throw _handleError(e);
     }
@@ -75,11 +98,8 @@ class SupabaseService {
   /// Obtener perfil de usuario
   Future<Map<String, dynamic>> getUserProfile(String userId) async {
     try {
-      final response = await _client
-          .from('users')
-          .select()
-          .eq('id', userId)
-          .single();
+      final response =
+          await _client.from('users').select().eq('id', userId).single();
 
       return response;
     } catch (e) {
@@ -109,6 +129,137 @@ class SupabaseService {
           .single();
 
       return response;
+    } catch (e) {
+      throw _handleError(e);
+    }
+  }
+
+  // ==================== ADMINISTRACIÓN DE USUARIOS ====================
+
+  /// Obtener todos los usuarios (solo admin)
+  Future<List<Map<String, dynamic>>> getAllUsers() async {
+    try {
+      final response = await _client
+          .from('users')
+          .select()
+          .order('created_at', ascending: false);
+
+      return List<Map<String, dynamic>>.from(response);
+    } catch (e) {
+      throw _handleError(e);
+    }
+  }
+
+  /// Crear usuario por administrador
+  Future<Map<String, dynamic>> createUserByAdmin({
+    required String email,
+    required String password,
+    required String name,
+    required String role,
+    String? phone,
+    String status = 'active',
+  }) async {
+    try {
+      // Crear usuario en Auth
+      final authResponse = await _client.auth.admin.createUser(
+        AdminUserAttributes(
+          email: email,
+          password: password,
+          emailConfirm: true, // Auto-confirmar email
+        ),
+      );
+
+      if (authResponse.user == null) {
+        throw Exception('Error al crear usuario en Auth');
+      }
+
+      // Crear perfil en tabla users
+      final userProfile = await _client
+          .from('users')
+          .insert({
+            'id': authResponse.user!.id,
+            'email': email,
+            'name': name,
+            'phone': phone,
+            'role': role,
+            'status': status,
+            'created_by_admin': true,
+          })
+          .select()
+          .single();
+
+      return userProfile;
+    } catch (e) {
+      throw _handleError(e);
+    }
+  }
+
+  /// Actualizar rol de usuario
+  Future<Map<String, dynamic>> updateUserRole({
+    required String userId,
+    required String role,
+  }) async {
+    try {
+      final response = await _client
+          .from('users')
+          .update({
+            'role': role,
+            'updated_at': DateTime.now().toIso8601String(),
+          })
+          .eq('id', userId)
+          .select()
+          .single();
+
+      return response;
+    } catch (e) {
+      throw _handleError(e);
+    }
+  }
+
+  /// Cambiar estado de usuario (activo/inactivo)
+  Future<Map<String, dynamic>> toggleUserStatus({
+    required String userId,
+    required String status,
+  }) async {
+    try {
+      final response = await _client
+          .from('users')
+          .update({
+            'status': status,
+            'updated_at': DateTime.now().toIso8601String(),
+          })
+          .eq('id', userId)
+          .select()
+          .single();
+
+      return response;
+    } catch (e) {
+      throw _handleError(e);
+    }
+  }
+
+  /// Eliminar usuario (soft delete - marca como inactivo)
+  Future<void> deleteUser(String userId) async {
+    try {
+      await _client.from('users').update({
+        'status': 'inactive',
+        'updated_at': DateTime.now().toIso8601String(),
+      }).eq('id', userId);
+    } catch (e) {
+      throw _handleError(e);
+    }
+  }
+
+  /// Restablecer contraseña de usuario (solo admin)
+  Future<void> adminResetUserPassword({
+    required String userId,
+    required String newPassword,
+  }) async {
+    try {
+      await _client.auth.admin.updateUserById(
+        userId,
+        attributes: AdminUserAttributes(password: newPassword),
+      );
     } catch (e) {
       throw _handleError(e);
     }
@@ -165,8 +316,7 @@ class SupabaseService {
     try {
       await _client
           .from('reservations')
-          .update({'status': 'cancelled'})
-          .eq('id', reservationId);
+          .update({'status': 'cancelled'}).eq('id', reservationId);
     } catch (e) {
       throw _handleError(e);
     }
@@ -204,11 +354,8 @@ class SupabaseService {
   /// Obtener item del menú por ID
   Future<Map<String, dynamic>> getMenuItem(String itemId) async {
     try {
-      final response = await _client
-          .from('menu_items')
-          .select()
-          .eq('id', itemId)
-          .single();
+      final response =
+          await _client.from('menu_items').select().eq('id', itemId).single();
 
       return response;
     } catch (e) {
@@ -219,11 +366,8 @@ class SupabaseService {
   /// Crear nuevo item del menú
   Future<Map<String, dynamic>> createMenuItem(Map<String, dynamic> data) async {
     try {
-      final response = await _client
-          .from('menu_items')
-          .insert(data)
-          .select()
-          .single();
+      final response =
+          await _client.from('menu_items').insert(data).select().single();
 
       return response;
     } catch (e) {
@@ -317,17 +461,13 @@ class SupabaseService {
   /// Obtener orden por ID
   Future<Map<String, dynamic>> getOrder(String orderId) async {
     try {
-      final response = await _client
-          .from('orders')
-          .select('''
+      final response = await _client.from('orders').select('''
             *,
             order_items (
               *,
               menu_items (*)
             )
-          ''')
-          .eq('id', orderId)
-          .single();
+          ''').eq('id', orderId).single();
 
       return response;
     } catch (e) {
@@ -338,17 +478,13 @@ class SupabaseService {
   /// Obtener órdenes del usuario
   Future<List<Map<String, dynamic>>> getUserOrders(String userId) async {
     try {
-      final response = await _client
-          .from('orders')
-          .select('''
+      final response = await _client.from('orders').select('''
             *,
             order_items (
               *,
               menu_items (*)
             )
-          ''')
-          .eq('user_id', userId)
-          .order('created_at', ascending: false);
+          ''').eq('user_id', userId).order('created_at', ascending: false);
 
       return List<Map<String, dynamic>>.from(response);
     } catch (e) {
@@ -420,14 +556,10 @@ class SupabaseService {
   /// Obtener reseñas
   Future<List<Map<String, dynamic>>> getReviews({int limit = 10}) async {
     try {
-      final response = await _client
-          .from('reviews')
-          .select('''
+      final response = await _client.from('reviews').select('''
             *,
             users (name, email)
-          ''')
-          .order('created_at', ascending: false)
-          .limit(limit);
+          ''').order('created_at', ascending: false).limit(limit);
 
       return List<Map<String, dynamic>>.from(response);
     } catch (e) {
@@ -456,13 +588,10 @@ class SupabaseService {
   /// Marcar notificación como leída
   Future<void> markNotificationAsRead(String notificationId) async {
     try {
-      await _client
-          .from('notifications')
-          .update({
-            'is_read': true,
-            'read_at': DateTime.now().toIso8601String(),
-          })
-          .eq('id', notificationId);
+      await _client.from('notifications').update({
+        'is_read': true,
+        'read_at': DateTime.now().toIso8601String(),
+      }).eq('id', notificationId);
     } catch (e) {
       throw _handleError(e);
     }
