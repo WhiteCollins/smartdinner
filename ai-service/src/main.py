@@ -151,15 +151,15 @@ async def get_model_status():
     - Número de muestras usadas
     """
     model_info = prediction_service.get_model_info()
-    metadata = model_info.get("metadata", {})
+    metadata = model_info.get("metadata") or {}
     
     return ModelStatus(
         model_name="demand_prediction_model",
         status="loaded" if model_info["model_loaded"] else "not_trained",
         version=settings.version,
-        last_training=metadata.get("trained_at"),
-        accuracy=metadata.get("r2"),
-        samples_trained=metadata.get("samples")
+        last_training=metadata.get("trained_at") if metadata else None,
+        accuracy=metadata.get("r2") if metadata else None,
+        samples_trained=metadata.get("samples") if metadata else None
     )
 
 @app.get("/models/info")

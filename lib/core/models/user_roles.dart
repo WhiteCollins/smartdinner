@@ -1,17 +1,20 @@
-/// Roles disponibles en el sistema SmartDinner
-enum UserRole {
-  admin('admin', 'Administrador'),
-  waiter('waiter', 'Mesero'),
-  cashier('cashier', 'Cajero'),
-  cook('cook', 'Cocinero'),
-  deliveryPerson('delivery', 'Repartidor'),
-  vipCustomer('vip_customer', 'Cliente VIP'),
-  customer('customer', 'Cliente');
+import 'package:flutter/material.dart';
 
-  const UserRole(this.value, this.displayName);
+/// Roles disponibles en el sistema SmartDinner
+/// IMPORTANTE: Deben coincidir con el CHECK constraint en la tabla users de Supabase
+/// Roles: admin, customer, waiter, cook, cashier
+enum UserRole {
+  admin('admin', 'Administrador', Icons.admin_panel_settings),
+  waiter('waiter', 'Mesero', Icons.restaurant),
+  cook('cook', 'Cocinero', Icons.soup_kitchen),
+  cashier('cashier', 'Cajero', Icons.point_of_sale),
+  customer('customer', 'Cliente', Icons.person);
+
+  const UserRole(this.value, this.displayName, this.icon);
 
   final String value;
   final String displayName;
+  final IconData icon;
 
   /// Obtener rol desde un string
   static UserRole fromString(String value) {
@@ -28,13 +31,27 @@ enum UserRole {
   bool get isStaff =>
       this == UserRole.admin ||
       this == UserRole.waiter ||
-      this == UserRole.cashier ||
       this == UserRole.cook ||
-      this == UserRole.deliveryPerson;
+      this == UserRole.cashier;
 
   /// Verificar si el rol es un cliente
-  bool get isCustomer =>
-      this == UserRole.customer || this == UserRole.vipCustomer;
+  bool get isCustomer => this == UserRole.customer;
+
+  /// Verificar si puede ver mesas y tomar pedidos
+  bool get canManageTables => this == UserRole.admin || this == UserRole.waiter;
+
+  /// Verificar si puede ver la cocina (KDS)
+  bool get canViewKitchen => this == UserRole.admin || this == UserRole.cook;
+
+  /// Verificar si puede manejar caja y pagos
+  bool get canManageCash => this == UserRole.admin || this == UserRole.cashier;
+
+  /// Verificar si puede ver reportes
+  bool get canViewReports => this == UserRole.admin || this == UserRole.cashier;
+
+  /// Verificar si puede gestionar inventario
+  bool get canManageInventory =>
+      this == UserRole.admin || this == UserRole.cook;
 }
 
 /// Estado del usuario en el sistema

@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../../config/routes.dart';
+import '../../../core/services/supabase_service.dart';
 import '../../../core/state/theme_notifier.dart';
 
 class DashboardScreen extends StatefulWidget {
@@ -11,6 +13,133 @@ class DashboardScreen extends StatefulWidget {
 }
 
 class _DashboardScreenState extends State<DashboardScreen> {
+  final _supabaseService = SupabaseService();
+  final _supabase = Supabase.instance.client;
+
+  // Statistics data
+  int _todayReservations = 0;
+  int _todayOrders = 0;
+  double _todayRevenue = 0.0;
+  int _occupiedTables = 0;
+  int _totalTables = 0;
+  bool _isLoading = true;
+  List<Map<String, dynamic>> _recentActivity = [];
+
+  @override
+  void initState() {
+    super.initState();
+    _loadDashboardData();
+  }
+
+  Future<void> _loadDashboardData() async {
+    setState(() => _isLoading = true);
+
+    try {
+      final today = DateTime.now();
+      final todayStart =
+          DateTime(today.year, today.month, today.day).toIso8601String();
+      final todayEnd = DateTime(today.year, today.month, today.day, 23, 59, 59)
+          .toIso8601String();
+
+      // Fetch today's reservations count
+      final reservationsResponse = await _supabase
+          .from('reservations')
+          .select('id')
+          .gte('created_at', todayStart)
+          .lte('created_at', todayEnd);
+
+      // Fetch today's orders with total
+      final ordersResponse = await _supabase
+          .from('orders')
+          .select('id, total')
+          .gte('created_at', todayStart)
+          .lte('created_at', todayEnd);
+
+      // Calculate revenue from orders
+      double revenue = 0.0;
+      for (var order in ordersResponse) {
+        revenue += (order['total'] ?? 0).toDouble();
+      }
+
+      // Fetch tables status
+      final tablesResponse = await _supabase.from('mesas').select('id, estado');
+
+      int occupied = 0;
+      for (var table in tablesResponse) {
+        if (table['estado'] == 'ocupada' || table['estado'] == 'reservada') {
+          occupied++;
+        }
+      }
+
+      // Fetch recent activity (last 10 events)
+      final recentOrders = await _supabase
+          .from('orders')
+          .select('id, status, created_at')
+          .order('created_at', ascending: false)
+          .limit(3);
+
+      final recentReservations = await _supabase
+          .from('reservations')
+          .select('id, party_size, created_at')
+          .order('created_at', ascending: false)
+          .limit(3);
+
+      // Build activity list
+      List<Map<String, dynamic>> activities = [];
+
+      for (var reservation in recentReservations) {
+        activities.add({
+          'title': 'Nueva reserva para ${reservation['party_size']} personas',
+          'time': _formatTimeAgo(DateTime.parse(reservation['created_at'])),
+          'icon': Icons.event,
+          'timestamp': DateTime.parse(reservation['created_at']),
+        });
+      }
+
+      for (var order in recentOrders) {
+        activities.add({
+          'title':
+              'Pedido #${order['id'].toString().substring(0, 4)} - ${order['status']}',
+          'time': _formatTimeAgo(DateTime.parse(order['created_at'])),
+          'icon': Icons.receipt_long,
+          'timestamp': DateTime.parse(order['created_at']),
+        });
+      }
+
+      // Sort by timestamp
+      activities.sort((a, b) =>
+          (b['timestamp'] as DateTime).compareTo(a['timestamp'] as DateTime));
+
+      setState(() {
+        _todayReservations = reservationsResponse.length;
+        _todayOrders = ordersResponse.length;
+        _todayRevenue = revenue;
+        _occupiedTables = occupied;
+        _totalTables = tablesResponse.length;
+        _recentActivity = activities.take(5).toList();
+        _isLoading = false;
+      });
+    } catch (e) {
+      print('Error loading dashboard data: $e');
+      setState(() => _isLoading = false);
+    }
+  }
+
+  String _formatTimeAgo(DateTime dateTime) {
+    final now = DateTime.now();
+    final difference = now.difference(dateTime);
+
+    if (difference.inMinutes < 1) {
+      return 'Ahora';
+    } else if (difference.inMinutes < 60) {
+      return 'Hace ${difference.inMinutes} min';
+    } else if (difference.inHours < 24) {
+      return 'Hace ${difference.inHours} hora${difference.inHours > 1 ? 's' : ''}';
+    } else {
+      return 'Hace ${difference.inDays} día${difference.inDays > 1 ? 's' : ''}';
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -18,6 +147,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
         title: Text('Panel Administrativo'),
         automaticallyImplyLeading: false,
         actions: [
+          IconButton(
+            icon: Icon(Icons.refresh),
+            onPressed: _loadDashboardData,
+          ),
           IconButton(
             icon: Icon(Icons.notifications),
             onPressed: () {
@@ -72,28 +205,34 @@ class _DashboardScreenState extends State<DashboardScreen> {
           ),
         ],
       ),
-      body: SingleChildScrollView(
-        padding: EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Statistics cards
-            _buildStatsSection(),
-            SizedBox(height: 24),
+      body: _isLoading
+          ? const Center(child: CircularProgressIndicator())
+          : RefreshIndicator(
+              onRefresh: _loadDashboardData,
+              child: SingleChildScrollView(
+                physics: const AlwaysScrollableScrollPhysics(),
+                padding: EdgeInsets.all(16),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // Statistics cards
+                    _buildStatsSection(),
+                    SizedBox(height: 24),
 
-            // Quick actions
-            _buildQuickActions(),
-            SizedBox(height: 24),
+                    // Quick actions
+                    _buildQuickActions(),
+                    SizedBox(height: 24),
 
-            // Recent activity
-            _buildRecentActivity(),
-            SizedBox(height: 24),
+                    // Recent activity
+                    _buildRecentActivity(),
+                    SizedBox(height: 24),
 
-            // AI Predictions
-            _buildPredictionsSection(),
-          ],
-        ),
-      ),
+                    // AI Predictions
+                    _buildPredictionsSection(),
+                  ],
+                ),
+              ),
+            ),
     );
   }
 
@@ -109,12 +248,12 @@ class _DashboardScreenState extends State<DashboardScreen> {
         Row(
           children: [
             Expanded(
-                child:
-                    _buildStatCard('Reservas', '24', Icons.event, Colors.blue)),
+                child: _buildStatCard('Reservas', '$_todayReservations',
+                    Icons.event, Colors.blue)),
             SizedBox(width: 12),
             Expanded(
-                child: _buildStatCard(
-                    'Pedidos', '67', Icons.shopping_cart, Colors.green)),
+                child: _buildStatCard('Pedidos', '$_todayOrders',
+                    Icons.shopping_cart, Colors.green)),
           ],
         ),
         SizedBox(height: 12),
@@ -122,11 +261,17 @@ class _DashboardScreenState extends State<DashboardScreen> {
           children: [
             Expanded(
                 child: _buildStatCard(
-                    'Ingresos', '\$1,234', Icons.attach_money, Colors.orange)),
+                    'Ingresos',
+                    '\$${_todayRevenue.toStringAsFixed(2)}',
+                    Icons.attach_money,
+                    Colors.orange)),
             SizedBox(width: 12),
             Expanded(
-                child: _buildStatCard('Mesas Ocupadas', '18/25',
-                    Icons.table_restaurant, Colors.purple)),
+                child: _buildStatCard(
+                    'Mesas Ocupadas',
+                    '$_occupiedTables/$_totalTables',
+                    Icons.table_restaurant,
+                    Colors.purple)),
           ],
         ),
       ],
@@ -178,24 +323,52 @@ class _DashboardScreenState extends State<DashboardScreen> {
           style: Theme.of(context).textTheme.headlineSmall,
         ),
         SizedBox(height: 16),
-        GridView.count(
-          crossAxisCount: 2,
-          shrinkWrap: true,
-          physics: NeverScrollableScrollPhysics(),
-          crossAxisSpacing: 12,
-          mainAxisSpacing: 12,
-          childAspectRatio: 1.5,
+        Wrap(
+          spacing: 12,
+          runSpacing: 12,
           children: [
             _buildActionCard(
-              'Gestionar Usuarios',
-              Icons.people,
+              'Cocina',
+              Icons.soup_kitchen,
+              Colors.red,
+              () {
+                Navigator.pushNamed(context, AppRoutes.kitchen);
+              },
+            ),
+            _buildActionCard(
+              'Reportes',
+              Icons.bar_chart,
+              Colors.cyan,
+              () {
+                Navigator.pushNamed(context, AppRoutes.reports);
+              },
+            ),
+            _buildActionCard(
+              'Usuarios',
+              Icons.people_outline,
               Colors.purple,
               () {
                 Navigator.pushNamed(context, AppRoutes.adminUsers);
               },
             ),
             _buildActionCard(
-              'Gestionar Reservas',
+              'Mesas',
+              Icons.table_restaurant,
+              Colors.teal,
+              () {
+                Navigator.pushNamed(context, AppRoutes.tablesManagement);
+              },
+            ),
+            _buildActionCard(
+              'Inventario',
+              Icons.inventory_2,
+              Colors.indigo,
+              () {
+                Navigator.pushNamed(context, AppRoutes.inventory);
+              },
+            ),
+            _buildActionCard(
+              'Reservas',
               Icons.event_note,
               Colors.blue,
               () {
@@ -203,19 +376,35 @@ class _DashboardScreenState extends State<DashboardScreen> {
               },
             ),
             _buildActionCard(
-              'Ver Pedidos',
-              Icons.list_alt,
+              'Pedidos',
+              Icons.receipt_long,
               Colors.green,
               () {
                 Navigator.pushNamed(context, AppRoutes.orders);
               },
             ),
             _buildActionCard(
-              'Gestionar Menú',
+              'Menú',
               Icons.restaurant_menu,
               Colors.orange,
               () {
                 Navigator.pushNamed(context, '/admin/menu');
+              },
+            ),
+            _buildActionCard(
+              'IA',
+              Icons.auto_awesome,
+              Colors.deepPurple,
+              () {
+                Navigator.pushNamed(context, AppRoutes.aiPredictions);
+              },
+            ),
+            _buildActionCard(
+              'Pruebas',
+              Icons.science,
+              Colors.pink,
+              () {
+                Navigator.pushNamed(context, AppRoutes.integrationTests);
               },
             ),
           ],
@@ -226,23 +415,43 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
   Widget _buildActionCard(
       String title, IconData icon, Color color, VoidCallback onTap) {
-    return Card(
+    return Material(
+      color: Colors.transparent,
       child: InkWell(
         onTap: onTap,
         borderRadius: BorderRadius.circular(12),
-        child: Padding(
-          padding: const EdgeInsets.all(16.0),
+        child: Container(
+          width: 100,
+          padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 12),
+          decoration: BoxDecoration(
+            color: color.withOpacity(0.1),
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(
+              color: color.withOpacity(0.3),
+              width: 1,
+            ),
+          ),
           child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
+            mainAxisSize: MainAxisSize.min,
             children: [
-              Icon(icon, size: 32, color: color),
+              Container(
+                padding: EdgeInsets.all(10),
+                decoration: BoxDecoration(
+                  color: color.withOpacity(0.15),
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(icon, size: 24, color: color),
+              ),
               SizedBox(height: 8),
               Text(
                 title,
                 textAlign: TextAlign.center,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
                 style: TextStyle(
-                  fontSize: 14,
+                  fontSize: 13,
                   fontWeight: FontWeight.w600,
+                  color: color,
                 ),
               ),
             ],
@@ -262,108 +471,61 @@ class _DashboardScreenState extends State<DashboardScreen> {
         ),
         SizedBox(height: 16),
         Card(
-          child: ListView.separated(
-            shrinkWrap: true,
-            physics: NeverScrollableScrollPhysics(),
-            itemCount: 5,
-            separatorBuilder: (context, index) => Divider(height: 1),
-            itemBuilder: (context, index) {
-              final activities = [
-                {
-                  'title': 'Nueva reserva para 4 personas',
-                  'time': 'Hace 5 min',
-                  'icon': Icons.event
-                },
-                {
-                  'title': 'Pedido #1001 completado',
-                  'time': 'Hace 12 min',
-                  'icon': Icons.check_circle
-                },
-                {
-                  'title': 'Mesa 7 liberada',
-                  'time': 'Hace 18 min',
-                  'icon': Icons.table_restaurant
-                },
-                {
-                  'title': 'Nuevo platillo agregado al menú',
-                  'time': 'Hace 1 hora',
-                  'icon': Icons.add_circle
-                },
-                {
-                  'title': 'Predicción IA actualizada',
-                  'time': 'Hace 2 horas',
-                  'icon': Icons.analytics
-                },
-              ];
-
-              final activity = activities[index];
-              return ListTile(
-                leading: CircleAvatar(
-                  backgroundColor:
-                      Theme.of(context).colorScheme.surfaceContainerHighest,
-                  child: Icon(activity['icon'] as IconData,
-                      size: 20, color: Theme.of(context).colorScheme.onSurface),
+          child: _recentActivity.isEmpty
+              ? const Padding(
+                  padding: EdgeInsets.all(16.0),
+                  child: Text('No hay actividad reciente'),
+                )
+              : ListView.separated(
+                  shrinkWrap: true,
+                  physics: NeverScrollableScrollPhysics(),
+                  itemCount: _recentActivity.length,
+                  separatorBuilder: (context, index) => Divider(height: 1),
+                  itemBuilder: (context, index) {
+                    final activity = _recentActivity[index];
+                    return ListTile(
+                      leading: CircleAvatar(
+                        backgroundColor: Theme.of(context)
+                            .colorScheme
+                            .surfaceContainerHighest,
+                        child: Icon(activity['icon'] as IconData,
+                            size: 20,
+                            color: Theme.of(context).colorScheme.onSurface),
+                      ),
+                      title: Text(activity['title'] as String),
+                      subtitle: Text(activity['time'] as String),
+                      dense: true,
+                    );
+                  },
                 ),
-                title: Text(activity['title'] as String),
-                subtitle: Text(activity['time'] as String),
-                dense: true,
-              );
-            },
-          ),
         ),
       ],
     );
   }
 
   Widget _buildPredictionsSection() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          'Predicciones IA',
-          style: Theme.of(context).textTheme.headlineSmall,
-        ),
-        SizedBox(height: 16),
-        Card(
-          child: Padding(
-            padding: const EdgeInsets.all(16.0),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    Icon(Icons.trending_up, color: Colors.green),
-                    SizedBox(width: 8),
-                    Text(
-                      'Demanda Prevista para Mañana',
-                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                            fontWeight: FontWeight.bold,
-                          ),
-                    ),
-                  ],
-                ),
-                SizedBox(height: 12),
-                _buildPredictionItem('Pizza Margherita', 85, 'Alto'),
-                _buildPredictionItem('Pasta Carbonara', 67, 'Medio'),
-                _buildPredictionItem('Ensalada César', 45, 'Medio'),
-                _buildPredictionItem('Tiramisu', 23, 'Bajo'),
-                SizedBox(height: 12),
-                ElevatedButton(
-                  onPressed: () {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(content: Text('Ver predicciones detalladas...')),
-                    );
-                  },
-                  style: ElevatedButton.styleFrom(
-                    minimumSize: Size(double.infinity, 36),
-                  ),
-                  child: Text('Ver Análisis Completo'),
-                ),
-              ],
-            ),
-          ),
-        ),
-      ],
+    // Datos de ejemplo para demostración
+    final samplePredictions = [
+      {'level': 'high'},
+      {'level': 'high'},
+      {'level': 'high'},
+      {'level': 'medium'},
+      {'level': 'low'},
+    ];
+
+    final highDemand =
+        samplePredictions.where((p) => p['level'] == 'high').length;
+
+    return Card(
+      child: ListTile(
+        leading: Icon(Icons.trending_up, color: Colors.red),
+        title: Text('$highDemand items de alta demanda'),
+        subtitle: const Text('Predicción para mañana (Demo)'),
+        trailing: const Icon(Icons.arrow_forward_ios),
+        onTap: () {
+          Navigator.pushNamed(context, AppRoutes.aiPredictions);
+        },
+      ),
     );
   }
 

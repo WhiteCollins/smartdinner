@@ -415,9 +415,45 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Confirmar Eliminación'),
-        content:
-            Text('¿Estás seguro de que deseas eliminar a ${user['name']}?'),
+        title: const Row(
+          children: [
+            Icon(Icons.warning, color: Colors.red),
+            SizedBox(width: 8),
+            Text('⚠️ Eliminar Usuario'),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              '¿Estás seguro de que deseas eliminar a ${user['name']}?',
+              style: const TextStyle(fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 12),
+            const Text(
+              'Email: ',
+              style: TextStyle(fontWeight: FontWeight.w500),
+            ),
+            Text(user['email']),
+            const SizedBox(height: 12),
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: Colors.red.shade50,
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: Colors.red.shade200),
+              ),
+              child: const Text(
+                '⚠️ ADVERTENCIA: Esta acción es PERMANENTE y no se puede deshacer. El usuario será eliminado completamente de la base de datos.',
+                style: TextStyle(
+                  color: Colors.red,
+                  fontSize: 13,
+                ),
+              ),
+            ),
+          ],
+        ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
@@ -426,7 +462,7 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
           ElevatedButton(
             onPressed: () => Navigator.pop(context, true),
             style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
-            child: const Text('Eliminar'),
+            child: const Text('Sí, Eliminar Permanentemente'),
           ),
         ],
       ),
@@ -435,7 +471,7 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
     if (confirmed == true) {
       try {
         await _supabaseService.deleteUser(user['id']);
-        _showSuccessSnackbar('Usuario eliminado correctamente');
+        _showSuccessSnackbar('Usuario eliminado permanentemente');
         _loadUsers();
       } catch (e) {
         _showErrorSnackbar('Error al eliminar usuario: $e');
