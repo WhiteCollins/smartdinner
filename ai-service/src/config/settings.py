@@ -8,6 +8,7 @@ class Settings(BaseSettings):
     app_name: str = "SmartDinner AI Service"
     version: str = "1.0.0"
     port: int = 8000
+    host: str = "0.0.0.0"
     environment: str = "development"
     
     # Supabase
@@ -16,6 +17,7 @@ class Settings(BaseSettings):
     
     # Model Configuration
     model_path: str = "./models"
+    model_cache_ttl: int = 3600  # Added to match .env
     data_path: str = "./data"
     prediction_batch_size: int = 100
     model_retrain_interval: int = 86400  # 24 hours

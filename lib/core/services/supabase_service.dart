@@ -79,7 +79,23 @@ class SupabaseService {
   /// Recuperar contraseña - Envía email de reset
   Future<void> resetPassword(String email) async {
     try {
-      await _client.auth.resetPasswordForEmail(email);
+      // Incluir URL de redirección para web
+      final redirectUrl = kIsWeb ? '${Uri.base.origin}/#/reset-password' : null;
+      await _client.auth.resetPasswordForEmail(
+        email,
+        redirectTo: redirectUrl,
+      );
+    } catch (e) {
+      throw _handleError(e);
+    }
+  }
+
+  /// Actualizar contraseña del usuario actual (después de reset)
+  Future<void> updatePassword(String newPassword) async {
+    try {
+      await _client.auth.updateUser(
+        UserAttributes(password: newPassword),
+      );
     } catch (e) {
       throw _handleError(e);
     }
@@ -98,11 +114,18 @@ class SupabaseService {
   /// Obtener perfil de usuario
   Future<Map<String, dynamic>> getUserProfile(String userId) async {
     try {
+      print('🔍 getUserProfile - Buscando userId: $userId');
       final response =
           await _client.from('users').select().eq('id', userId).single();
 
+      print('🔍 getUserProfile - Response: $response');
+      print('🔍 getUserProfile - Response type: ${response.runtimeType}');
+      print('🔍 getUserProfile - Role: ${response['role']}');
+
       return response;
     } catch (e) {
+      print('❌ getUserProfile - ERROR: $e');
+      print('❌ getUserProfile - ERROR type: ${e.runtimeType}');
       throw _handleError(e);
     }
   }
@@ -151,6 +174,8 @@ class SupabaseService {
   }
 
   /// Crear usuario por administrador
+  /// Los usuarios DEBEN confirmar su email antes de iniciar sesión
+  /// Se envía correo de confirmación automáticamente
   Future<Map<String, dynamic>> createUserByAdmin({
     required String email,
     required String password,
@@ -160,20 +185,25 @@ class SupabaseService {
     String status = 'active',
   }) async {
     try {
-      // Crear usuario en Auth
-      final authResponse = await _client.auth.admin.createUser(
-        AdminUserAttributes(
-          email: email,
-          password: password,
-          emailConfirm: true, // Auto-confirmar email
-        ),
+      // Guardar sesión actual del admin
+      final currentSession = _client.auth.currentSession;
+
+      // Crear usuario usando signUp - ENVÍA email de confirmación
+      final authResponse = await _client.auth.signUp(
+        email: email,
+        password: password,
+        data: {
+          'name': name,
+          'role': role,
+        },
+        emailRedirectTo: kIsWeb ? '${Uri.base.origin}/#/login' : null,
       );
 
       if (authResponse.user == null) {
         throw Exception('Error al crear usuario en Auth');
       }
 
-      // Crear perfil en tabla users
+      // Crear perfil en tabla users (email_verified = false hasta que confirme)
       final userProfile = await _client
           .from('users')
           .insert({
@@ -183,10 +213,17 @@ class SupabaseService {
             'phone': phone,
             'role': role,
             'status': status,
+            'is_active': status == 'active',
+            'email_verified': false, // Requiere confirmación
             'created_by_admin': true,
           })
           .select()
           .single();
+
+      // Restaurar sesión del admin si existía
+      if (currentSession != null) {
+        await _client.auth.setSession(currentSession.refreshToken!);
+      }
 
       return userProfile;
     } catch (e) {
@@ -222,10 +259,14 @@ class SupabaseService {
     required String status,
   }) async {
     try {
+      // Sincronizar status (text) con is_active (boolean)
+      final isActive = status == 'active';
+
       final response = await _client
           .from('users')
           .update({
             'status': status,
+            'is_active': isActive,
             'updated_at': DateTime.now().toIso8601String(),
           })
           .eq('id', userId)
@@ -238,11 +279,24 @@ class SupabaseService {
     }
   }
 
-  /// Eliminar usuario (soft delete - marca como inactivo)
+  /// Eliminar usuario completamente usando función SQL
+  /// CUIDADO: Esta acción es irreversible
   Future<void> deleteUser(String userId) async {
+    try {
+      await _client.rpc('admin_delete_user', params: {
+        'user_id': userId,
+      });
+    } catch (e) {
+      throw _handleError(e);
+    }
+  }
+
+  /// Desactivar usuario (soft delete - solo marca como inactivo)
+  Future<void> deactivateUser(String userId) async {
     try {
       await _client.from('users').update({
         'status': 'inactive',
+        'is_active': false,
         'updated_at': DateTime.now().toIso8601String(),
       }).eq('id', userId);
     } catch (e) {
@@ -649,12 +703,48 @@ class SupabaseService {
 
   Exception _handleError(dynamic error) {
     if (error is PostgrestException) {
-      return Exception('Database error: ${error.message}');
+      return Exception('Error de base de datos: ${error.message}');
     } else if (error is AuthException) {
-      return Exception('Auth error: ${error.message}');
+      final message = error.message.toLowerCase();
+
+      // Rate limiting
+      if (message.contains('security purposes') || message.contains('after')) {
+        final seconds =
+            RegExp(r'(\d+) seconds').firstMatch(message)?.group(1) ?? '60';
+        return Exception(
+            'Por seguridad, espera $seconds segundos antes de intentar de nuevo');
+      }
+
+      // Email ya existe
+      if (message.contains('already registered') ||
+          message.contains('already exists')) {
+        return Exception('Este email ya está registrado');
+      }
+
+      // Email no confirmado
+      if (message.contains('email not confirmed') ||
+          message.contains('not confirmed')) {
+        return Exception(
+            'Debes confirmar tu email antes de iniciar sesión. Revisa tu correo.');
+      }
+
+      // Credenciales inválidas
+      if (message.contains('invalid') ||
+          message.contains('credentials') ||
+          message.contains('invalid login credentials')) {
+        return Exception(
+            'Email o contraseña incorrectos. Si acabas de crear la cuenta, verifica que hayas confirmado tu email.');
+      }
+
+      // Usuario no encontrado
+      if (message.contains('not found')) {
+        return Exception('Usuario no encontrado');
+      }
+
+      return Exception('Error de autenticación: ${error.message}');
     } else if (error is StorageException) {
-      return Exception('Storage error: ${error.message}');
+      return Exception('Error de almacenamiento: ${error.message}');
     }
-    return Exception('Unknown error: $error');
+    return Exception('Error: $error');
   }
 }

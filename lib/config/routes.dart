@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../features/auth/screens/login_screen.dart';
 import '../features/auth/screens/forgot_password_screen.dart';
+import '../features/auth/screens/reset_password_screen.dart';
 // import '../features/auth/screens/register_screen.dart'; // ❌ Registro público deshabilitado
 import '../features/reservations/screens/reservations_screen.dart';
 import '../features/orders/screens/orders_screen.dart';
@@ -8,6 +9,13 @@ import '../features/menu/screens/menu_screen.dart';
 import '../features/menu/screens/menu_admin_screen.dart';
 import '../features/admin/screens/dashboard_screen.dart';
 import '../features/admin/screens/user_management_screen.dart';
+import '../features/admin/screens/test_admin_check.dart';
+import '../features/admin/screens/ai_predictions_screen.dart';
+import '../features/admin/screens/tables_management_screen.dart';
+import '../features/admin/screens/inventory_screen.dart';
+import '../features/admin/screens/integration_tests_screen.dart';
+import '../features/kitchen/screens/kitchen_display_screen.dart';
+import '../features/reports/screens/reports_screen.dart';
 import '../utils/supabase_test_screen.dart';
 import '../core/services/supabase_service.dart';
 
@@ -15,6 +23,7 @@ class AppRoutes {
   static const String splash = '/';
   static const String login = '/login';
   static const String forgotPassword = '/forgot-password';
+  static const String resetPassword = '/reset-password';
   static const String register = '/register';
   static const String home = '/home';
   static const String reservations = '/reservations';
@@ -27,12 +36,30 @@ class AppRoutes {
   static const String adminUsers = '/admin/users';
   static const String adminPredictions = '/admin/predictions';
   static const String test = '/test'; // Ruta temporal para diagnóstico
+  static const String testAdminCheck =
+      '/test-admin-check'; // Diagnóstico de admin
+
+  // AI Routes (agregar al final de la clase)
+  static const String aiPredictions = '/admin/ai-predictions';
+  static const String aiSettings = '/admin/ai-settings';
+
+  // Restaurant Management Routes
+  static const String tablesManagement = '/admin/tables';
+  static const String inventory = '/admin/inventory';
+
+  // Kitchen & Reports Routes
+  static const String kitchen = '/kitchen';
+  static const String reports = '/admin/reports';
+
+  // Testing Routes
+  static const String integrationTests = '/admin/integration-tests';
 
   static Map<String, WidgetBuilder> get routes {
     return {
       splash: (context) => SplashScreen(),
       login: (context) => LoginScreen(),
       forgotPassword: (context) => const ForgotPasswordScreen(),
+      resetPassword: (context) => const ResetPasswordScreen(),
       // register: (context) => RegisterScreen(), // ❌ Registro público deshabilitado
       home: (context) => HomeScreen(),
       reservations: (context) => ReservationsScreen(),
@@ -41,7 +68,18 @@ class AppRoutes {
       adminMenu: (context) => AdminRoute(child: MenuAdminScreen()),
       adminDashboard: (context) => AdminRoute(child: DashboardScreen()),
       adminUsers: (context) => const AdminRoute(child: UserManagementScreen()),
+      aiPredictions: (context) =>
+          const AdminRoute(child: AiPredictionsScreen()),
+      tablesManagement: (context) =>
+          const AdminRoute(child: TablesManagementScreen()),
+      inventory: (context) => const AdminRoute(child: InventoryScreen()),
+      kitchen: (context) => const KitchenDisplayScreen(),
+      reports: (context) => const AdminRoute(child: ReportsScreen()),
+      integrationTests: (context) =>
+          const AdminRoute(child: IntegrationTestsScreen()),
       test: (context) => const SupabaseTestScreen(), // Pantalla de diagnóstico
+      testAdminCheck: (context) =>
+          const TestAdminCheckScreen(), // Diagnóstico admin
     };
   }
 }
@@ -120,29 +158,44 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   void initState() {
     super.initState();
+    print('🚀 DEBUG - HomeScreen initState llamado');
     _checkUserRole();
   }
 
   Future<void> _checkUserRole() async {
     try {
       final currentUser = _supabaseService.currentUser;
+      print('🔍 DEBUG - Current User: ${currentUser?.id}');
+      print('🔍 DEBUG - Current User Email: ${currentUser?.email}');
+
       if (currentUser != null) {
-        final userProfile = await _supabaseService.getUserProfile(currentUser.id);
+        final userProfile =
+            await _supabaseService.getUserProfile(currentUser.id);
+        print('🔍 DEBUG - User Profile completo: $userProfile');
+        print('🔍 DEBUG - Role específico: ${userProfile['role']}');
+        print('🔍 DEBUG - Role es admin?: ${userProfile['role'] == 'admin'}');
+
         setState(() {
           _isAdmin = userProfile['role'] == 'admin';
           _isLoading = false;
         });
+
+        print('🔍 DEBUG - _isAdmin final: $_isAdmin');
       } else {
+        print('⚠️ DEBUG - No hay usuario actual');
         setState(() => _isLoading = false);
       }
     } catch (e) {
-      print('Error al verificar rol: $e');
+      print('❌ ERROR al verificar rol: $e');
+      print('❌ ERROR tipo: ${e.runtimeType}');
       setState(() => _isLoading = false);
     }
   }
 
   List<Widget> get _screens {
+    print('📱 DEBUG - Construyendo screens, _isAdmin: $_isAdmin');
     if (_isAdmin) {
+      print('✅ DEBUG - Agregando DashboardScreen (4 pantallas)');
       return [
         ReservationsScreen(),
         MenuScreen(),
@@ -150,6 +203,7 @@ class _HomeScreenState extends State<HomeScreen> {
         DashboardScreen(),
       ];
     } else {
+      print('⚠️ DEBUG - NO agregando DashboardScreen (3 pantallas)');
       return [
         ReservationsScreen(),
         MenuScreen(),
@@ -159,6 +213,7 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   List<BottomNavigationBarItem> get _navItems {
+    print('📱 DEBUG - Construyendo navItems, _isAdmin: $_isAdmin');
     final items = [
       BottomNavigationBarItem(icon: Icon(Icons.event), label: 'Reservas'),
       BottomNavigationBarItem(
@@ -172,11 +227,15 @@ class _HomeScreenState extends State<HomeScreen> {
     ];
 
     if (_isAdmin) {
+      print('✅ DEBUG - Agregando tab Admin (4 tabs totales)');
       items.add(
         BottomNavigationBarItem(icon: Icon(Icons.dashboard), label: 'Admin'),
       );
+    } else {
+      print('⚠️ DEBUG - NO agregando tab Admin (3 tabs totales)');
     }
 
+    print('📱 DEBUG - Total items: ${items.length}');
     return items;
   }
 
@@ -231,7 +290,8 @@ class _AdminRouteState extends State<AdminRoute> {
     try {
       final currentUser = _supabaseService.currentUser;
       if (currentUser != null) {
-        final userProfile = await _supabaseService.getUserProfile(currentUser.id);
+        final userProfile =
+            await _supabaseService.getUserProfile(currentUser.id);
         setState(() {
           _isAdmin = userProfile['role'] == 'admin';
           _isLoading = false;
@@ -243,7 +303,8 @@ class _AdminRouteState extends State<AdminRoute> {
             Navigator.pushReplacementNamed(context, AppRoutes.home);
             ScaffoldMessenger.of(context).showSnackBar(
               const SnackBar(
-                content: Text('⚠️ No tienes permisos para acceder a esta sección'),
+                content:
+                    Text('⚠️ No tienes permisos para acceder a esta sección'),
                 backgroundColor: Colors.orange,
               ),
             );
