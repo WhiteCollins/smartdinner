@@ -35,7 +35,7 @@ class SupabaseService {
         email: email,
         password: password,
         data: {'name': name, 'phone': phone},
-        emailRedirectTo: kIsWeb ? Uri.base.origin : null,
+        emailRedirectTo: kIsWeb ? '${Uri.base.origin}/#/login' : null,
       );
 
       // Crear registro en tabla users
