@@ -391,6 +391,13 @@ class _LoginScreenState extends State<LoginScreen> {
       print('✅ Login exitoso! User ID: ${response.user?.id}');
 
       if (response.user != null) {
+        // Obtener perfil del usuario para verificar rol
+        final userProfile =
+            await _supabaseService.getUserProfile(response.user!.id);
+        final userRole = userProfile['role'] as String?;
+
+        print('👤 Rol del usuario: $userRole');
+
         // Login exitoso
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
@@ -411,9 +418,22 @@ class _LoginScreenState extends State<LoginScreen> {
           // Pequeño delay para mostrar el mensaje
           await Future.delayed(Duration(milliseconds: 500));
 
-          // Navegar a la pantalla principal
+          // Navegar según el rol del usuario
           if (mounted) {
-            Navigator.pushReplacementNamed(context, '/home');
+            if (userRole == 'admin') {
+              Navigator.pushReplacementNamed(context, '/admin/dashboard');
+            } else if (userRole == 'waiter') {
+              Navigator.pushReplacementNamed(
+                  context, '/home'); // TODO: Ruta de mesero
+            } else if (userRole == 'cook') {
+              Navigator.pushReplacementNamed(context, '/kitchen');
+            } else if (userRole == 'cashier') {
+              Navigator.pushReplacementNamed(
+                  context, '/home'); // TODO: Ruta de cajero
+            } else {
+              // Customer o rol por defecto
+              Navigator.pushReplacementNamed(context, '/home');
+            }
           }
         }
       }
